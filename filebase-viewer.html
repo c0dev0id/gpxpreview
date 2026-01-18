@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motorradfreunde Filebase Viewer</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: none;
+        }
+        .login-card {
+            max-width: 500px;
+            margin: 50px auto;
+        }
+        .file-item {
+            transition: all 0.3s;
+        }
+        .file-item:hover {
+            background-color: #f8f9fa;
+            transform: translateX(5px);
+        }
+        .debug-console {
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .debug-console .error { color: #ff6b6b; }
+        .debug-console .success { color: #51cf66; }
+        .debug-console .info { color: #74c0fc; }
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Card -->
+        <div id="loginCard" class="card login-card">
+            <div class="card-body p-5">
+                <h2 class="card-title text-center mb-4">
+                    <i class="bi bi-motorcycle"></i> Motorradfreunde Filebase
+                </h2>
+                <p class="text-muted text-center mb-4">
+                    Melden Sie sich an, um auf die Filebase zuzugreifen
+                </p>
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Benutzername</label>
+                        <input type="text" class="form-control" id="username" required autocomplete="username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Passwort</label>
+                        <input type="password" class="form-control" id="password" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="loginBtn">
+                        <span class="login-text">Anmelden</span>
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    </button>
+                </form>
+                <div id="loginError" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+        </div>
+
+        <!-- Main Content (hidden until logged in) -->
+        <div id="mainContent" class="d-none">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Filebase Dateien</h3>
+                    <div>
+                        <button class="btn btn-sm btn-success" id="refreshBtn">
+                            <span class="refresh-icon">🔄</span> Aktualisieren
+                        </button>
+                        <button class="btn btn-sm btn-danger" id="logoutBtn">Abmelden</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="filesList">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Laden...</span>
+                            </div>
+                            <p class="mt-3">Lade Dateien...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug Console -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Debug Console</h5>
+                </div>
+                <div class="card-body">
+                    <div id="debugConsole" class="debug-console"></div>
+                    <button class="btn btn-sm btn-secondary mt-2" id="clearDebugBtn">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const CONFIG = {
+            baseUrl: 'https://motorradfreunde-rheinneckar.de',
+            loginUrl: 'https://motorradfreunde-rheinneckar.de/wcf/login/',
+            apiUrl: 'https://motorradfreunde-rheinneckar.de/wcf/api',
+            rpcApiUrl: 'https://motorradfreunde-rheinneckar.de/wcf/api/rpc',
+            filebaseUrl: 'https://motorradfreunde-rheinneckar.de/filebase/'
+        };
+
+        // Debug logger
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            const entry = `<div class="${className}">[${timestamp}] ${message}</div>`;
+            $('#debugConsole').append(entry);
+            $('#debugConsole').scrollTop($('#debugConsole')[0].scrollHeight);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Clear debug console
+        $('#clearDebugBtn').click(() => $('#debugConsole').empty());
+
+        // Login form handler
+        $('#loginForm').submit(async function(e) {
+            e.preventDefault();
+
+            const username = $('#username').val();
+            const password = $('#password').val();
+
+            log('Attempting login...', 'info');
+            $('#loginBtn').prop('disabled', true);
+            $('.login-text').addClass('d-none');
+            $('.spinner-border').removeClass('d-none');
+            $('#loginError').addClass('d-none');
+
+            try {
+                const result = await login(username, password);
+
+                if (result.success) {
+                    log('Login successful!', 'success');
+                    $('#loginCard').fadeOut(() => {
+                        $('#mainContent').removeClass('d-none').hide().fadeIn();
+                        loadFilebaseData();
+                    });
+                } else {
+                    throw new Error(result.message || 'Login failed');
+                }
+            } catch (error) {
+                log(`Login error: ${error.message}`, 'error');
+                $('#loginError').text(error.message).removeClass('d-none');
+            } finally {
+                $('#loginBtn').prop('disabled', false);
+                $('.login-text').removeClass('d-none');
+                $('.spinner-border').addClass('d-none');
+            }
+        });
+
+        // Login function - tries multiple approaches
+        async function login(username, password) {
+            log('Testing CORS support...', 'info');
+
+            // Approach 1: Try RPC API login
+            try {
+                log('Trying RPC API login endpoint...', 'info');
+
+                const response = await $.ajax({
+                    url: CONFIG.loginUrl,
+                    method: 'POST',
+                    xhrFields: { withCredentials: true },
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    data: {
+                        username: username,
+                        password: password,
+                        useCookies: '1'
+                    }
+                });
+
+                log('Login response received', 'success');
+                return { success: true };
+
+            } catch (error) {
+                if (error.status === 0) {
+                    throw new Error('CORS Error: Der Server erlaubt keine Cross-Origin Anfragen. Bitte hosten Sie diese Datei auf motorradfreunde-rheinneckar.de oder aktivieren Sie CORS.');
+                } else if (error.status === 401 || error.status === 403) {
+                    throw new Error('Ungültige Anmeldedaten');
+                } else {
+                    log(`Login failed with status ${error.status}: ${error.statusText}`, 'error');
+
+                    // Approach 2: Try alternative authentication
+                    return await tryAlternativeAuth(username, password);
+                }
+            }
+        }
+
+        // Alternative authentication method
+        async function tryAlternativeAuth(username, password) {
+            log('Trying alternative authentication method...', 'info');
+
+            try {
+                // Try fetching the login page first to get any CSRF tokens
+                const loginPageResponse = await $.ajax({
+                    url: CONFIG.loginUrl,
+                    method: 'GET',
+                    xhrFields: { withCredentials: true }
+                });
+
+                log('Retrieved login page', 'info');
+
+                // Parse for CSRF token or security token
+                const $page = $(loginPageResponse);
+                const csrfToken = $page.find('input[name="t"]').val();
+
+                if (csrfToken) {
+                    log(`Found CSRF token: ${csrfToken.substring(0, 10)}...`, 'info');
+                }
+
+                // Now try to submit with token
+                const response = await $.ajax({
+                    url: CONFIG.loginUrl,
+                    method: 'POST',
+                    xhrFields: { withCredentials: true },
+                    data: {
+                        username: username,
+                        password: password,
+                        useCookies: '1',
+                        t: csrfToken
+                    }
+                });
+
+                return { success: true };
+
+            } catch (error) {
+                throw new Error(`Authentication failed: ${error.statusText || error.message}`);
+            }
+        }
+
+        // Load filebase data - tries multiple API approaches
+        async function loadFilebaseData() {
+            log('Loading filebase data...', 'info');
+
+            try {
+                // Approach 1: Try RPC API
+                await tryRpcApi();
+            } catch (error) {
+                log(`RPC API failed: ${error.message}`, 'error');
+
+                try {
+                    // Approach 2: Try scraping HTML
+                    await tryHtmlScraping();
+                } catch (error2) {
+                    log(`HTML scraping failed: ${error2.message}`, 'error');
+                    displayError('Konnte keine Dateien laden. Siehe Debug Console für Details.');
+                }
+            }
+        }
+
+        // Try RPC API endpoints
+        async function tryRpcApi() {
+            log('Attempting RPC API request...', 'info');
+
+            const endpoints = [
+                `${CONFIG.rpcApiUrl}/filebase/files`,
+                `${CONFIG.rpcApiUrl}/filebase/entries`,
+                `${CONFIG.apiUrl}/index.php?filebase/FileList`,
+                `${CONFIG.apiUrl}/index.php?filebase-file-list/`,
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    log(`Trying endpoint: ${endpoint}`, 'info');
+
+                    const response = await $.ajax({
+                        url: endpoint,
+                        method: 'GET',
+                        xhrFields: { withCredentials: true },
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    log('Successfully retrieved data from RPC API!', 'success');
+                    log(`Response: ${JSON.stringify(response).substring(0, 200)}...`, 'info');
+
+                    displayFiles(response);
+                    return;
+
+                } catch (error) {
+                    log(`Endpoint ${endpoint} failed: ${error.status} ${error.statusText}`, 'error');
+                }
+            }
+
+            throw new Error('All RPC API endpoints failed');
+        }
+
+        // Try HTML scraping
+        async function tryHtmlScraping() {
+            log('Attempting HTML scraping...', 'info');
+
+            const response = await $.ajax({
+                url: CONFIG.filebaseUrl,
+                method: 'GET',
+                xhrFields: { withCredentials: true }
+            });
+
+            log('Successfully retrieved filebase page', 'success');
+
+            const $page = $(response);
+            const files = [];
+
+            // Try to find file entries - this will depend on the actual HTML structure
+            $page.find('.filebaseFile, .fileEntry, [class*="file"]').each(function() {
+                const $item = $(this);
+                const name = $item.find('.fileName, .title, h3, a').first().text().trim();
+                const url = $item.find('a').first().attr('href');
+
+                if (name && url) {
+                    files.push({
+                        name: name,
+                        url: url.startsWith('http') ? url : CONFIG.baseUrl + url
+                    });
+                }
+            });
+
+            log(`Parsed ${files.length} files from HTML`, 'success');
+
+            if (files.length === 0) {
+                // Log the HTML structure for debugging
+                log('HTML structure sample:', 'info');
+                log($page.find('body').html().substring(0, 500), 'info');
+                throw new Error('No files found in HTML');
+            }
+
+            displayFiles({ files: files });
+        }
+
+        // Display files in the UI
+        function displayFiles(data) {
+            const files = data.files || data.items || data.entries || [];
+
+            if (!Array.isArray(files) || files.length === 0) {
+                log('No files in response or unexpected format', 'error');
+                log(`Data structure: ${JSON.stringify(data).substring(0, 500)}`, 'info');
+                displayError('Keine Dateien gefunden oder unerwartetes Datenformat.');
+                return;
+            }
+
+            log(`Displaying ${files.length} files`, 'success');
+
+            let html = '<div class="list-group">';
+
+            files.forEach((file, index) => {
+                const name = file.name || file.title || file.filename || `Datei ${index + 1}`;
+                const url = file.url || file.downloadUrl || file.link || '#';
+                const size = file.size ? formatFileSize(file.size) : '';
+                const date = file.uploadDate || file.date || '';
+
+                html += `
+                    <div class="list-group-item file-item">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">${escapeHtml(name)}</h5>
+                                ${size ? `<small class="text-muted">Größe: ${size}</small>` : ''}
+                                ${date ? `<small class="text-muted ms-2">Datum: ${date}</small>` : ''}
+                            </div>
+                            <a href="${url}" class="btn btn-sm btn-outline-primary" target="_blank" download>
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            $('#filesList').html(html);
+        }
+
+        // Display error message
+        function displayError(message) {
+            $('#filesList').html(`
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading">⚠️ Fehler</h4>
+                    <p>${message}</p>
+                    <hr>
+                    <p class="mb-0">Überprüfen Sie die Debug Console für weitere Details.</p>
+                </div>
+            `);
+        }
+
+        // Utility functions
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Refresh button
+        $('#refreshBtn').click(function() {
+            $(this).find('.refresh-icon').addClass('spinning');
+            loadFilebaseData();
+            setTimeout(() => {
+                $(this).find('.refresh-icon').removeClass('spinning');
+            }, 1000);
+        });
+
+        // Logout button
+        $('#logoutBtn').click(function() {
+            if (confirm('Möchten Sie sich wirklich abmelden?')) {
+                location.reload();
+            }
+        });
+
+        // Initial log
+        log('Filebase Viewer initialized', 'success');
+        log('IMPORTANT: If you see CORS errors, host this file on motorradfreunde-rheinneckar.de', 'info');
+    </script>
+
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinning {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</body>
+</html>
