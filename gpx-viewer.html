@@ -249,6 +249,9 @@
                 <div class="info-row"><strong>Waypoints:</strong> <span id="track-waypoints">-</span></div>
                 <div class="info-row"><strong>Upload:</strong> <span id="track-upload-date">-</span></div>
                 <div class="info-row"><strong>Kategorie:</strong> <span id="track-category">-</span></div>
+                <div class="info-row" style="margin-top: 8px; font-size: 11px; font-style: italic; opacity: 0.7;">
+                    🤖 = Automatisch generierte Route via OSRM
+                </div>
             </div>
         </div>
     </div>
@@ -348,8 +351,40 @@
             return totalDistance;
         }
 
+        // Generate route from waypoints using OSRM
+        async function generateRouteFromWaypoints(waypoints) {
+            if (waypoints.length < 2) return null;
+
+            // OSRM expects coordinates as lon,lat
+            const coords = waypoints.map(w => `${w.lon},${w.lat}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                    const route = data.routes[0];
+                    // Convert GeoJSON coordinates [lon, lat] to Leaflet format [lat, lon]
+                    const routePoints = route.geometry.coordinates.map(coord => ({
+                        lat: coord[1],
+                        lon: coord[0]
+                    }));
+
+                    return {
+                        points: routePoints,
+                        distance: route.distance / 1000 // Convert meters to km
+                    };
+                }
+            } catch (error) {
+                console.error('OSRM routing failed:', error);
+            }
+
+            return null;
+        }
+
         // Display GPX on map
-        function displayGPX(fileData) {
+        async function displayGPX(fileData) {
             // Clear existing layers
             if (currentLayer) {
                 map.removeLayer(currentLayer);
@@ -364,6 +399,23 @@
 
             let allPoints = [];
             let totalDistance = 0;
+            let isGeneratedRoute = false;
+
+            // If no tracks but we have waypoints, generate route
+            if (tracks.length === 0 && waypoints.length >= 2) {
+                console.log('No tracks found, generating route from waypoints...');
+                const generatedRoute = await generateRouteFromWaypoints(waypoints);
+
+                if (generatedRoute) {
+                    tracks.push({
+                        name: 'Generated Route',
+                        points: generatedRoute.points,
+                        generated: true
+                    });
+                    totalDistance = generatedRoute.distance;
+                    isGeneratedRoute = true;
+                }
+            }
 
             // Draw tracks
             tracks.forEach((track, idx) => {
@@ -371,14 +423,20 @@
                 allPoints = allPoints.concat(latLngs);
 
                 const polyline = L.polyline(latLngs, {
-                    color: '#0d6efd',
+                    color: track.generated ? '#28a745' : '#0d6efd',
                     weight: 4,
-                    opacity: 0.7
+                    opacity: 0.7,
+                    dashArray: track.generated ? '10, 10' : null
                 }).addTo(currentLayer);
 
-                polyline.bindPopup(`<strong>${track.name}</strong>`);
+                const popupText = track.generated
+                    ? `<strong>${track.name}</strong><br><small>🤖 Automatisch generierte Route (OSRM)</small>`
+                    : `<strong>${track.name}</strong>`;
+                polyline.bindPopup(popupText);
 
-                totalDistance += calculateDistance(track.points);
+                if (!isGeneratedRoute) {
+                    totalDistance += calculateDistance(track.points);
+                }
             });
 
             // Draw waypoints with labels
@@ -409,7 +467,13 @@
             // Update map info
             document.getElementById('map-info').style.display = 'block';
             document.getElementById('track-title').textContent = fileData.title;
-            document.getElementById('track-distance').textContent = totalDistance > 0 ? `${totalDistance.toFixed(2)} km` : '-';
+
+            let distanceText = totalDistance > 0 ? `${totalDistance.toFixed(2)} km` : '-';
+            if (isGeneratedRoute) {
+                distanceText += ' 🤖';
+            }
+            document.getElementById('track-distance').textContent = distanceText;
+
             document.getElementById('track-waypoints').textContent = waypoints.length;
             document.getElementById('track-upload-date').textContent = fileData.upload_date || '-';
             document.getElementById('track-category').textContent = fileData.category || '-';
