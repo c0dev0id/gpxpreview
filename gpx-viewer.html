@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPX Track Viewer</title>
+
+    <!-- Leaflet CSS for OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 400px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #filters {
+            padding: 15px;
+            background: white;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        #file-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .file-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+            border-color: #0d6efd;
+            transform: translateX(3px);
+        }
+
+        .file-item.selected {
+            background: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+
+        .file-item .file-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .file-item .file-meta {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .file-item.selected .file-meta {
+            opacity: 0.9;
+        }
+
+        #map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #stats {
+            padding: 10px 15px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        .loading {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .no-files {
+            padding: 40px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .db-upload-area {
+            padding: 30px;
+            margin: 20px;
+            border: 3px dashed #dee2e6;
+            border-radius: 8px;
+            text-align: center;
+            background: white;
+        }
+
+        .db-upload-area.drag-over {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Custom scrollbar */
+        #file-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #file-list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #file-list-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        #file-list-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .map-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .map-info h6 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .map-info .info-row {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Sidebar: Filters + File List -->
+        <div id="sidebar">
+            <div id="filters">
+                <h5 class="mb-3">🗺️ GPX Track Viewer</h5>
+
+                <!-- Database Upload -->
+                <div id="db-upload-section">
+                    <div class="db-upload-area" id="db-upload-area">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <h6>Datenbank laden</h6>
+                        <p style="font-size: 13px; color: #6c757d; margin-bottom: 15px;">
+                            Ziehe deine SQLite-Datei hierher oder klicke zum Auswählen
+                        </p>
+                        <input type="file" id="db-file-input" accept=".sqlite,.db,.sqlite3" style="display: none;">
+                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('db-file-input').click()">
+                            Datei auswählen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filters (hidden until DB loaded) -->
+                <div id="filter-controls" style="display: none;">
+                    <div class="mb-3">
+                        <label class="filter-label">Kategorie</label>
+                        <select class="form-select form-select-sm" id="category-filter">
+                            <option value="">Alle Kategorien</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="filter-label">Von</label>
+                            <input type="date" class="form-control form-control-sm" id="date-from">
+                        </div>
+                        <div class="col-6">
+                            <label class="filter-label">Bis</label>
+                            <input type="date" class="form-control form-control-sm" id="date-to">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
+                        Filter zurücksetzen
+                    </button>
+                </div>
+            </div>
+
+            <!-- File List -->
+            <div id="file-list-container">
+                <div class="no-files" id="no-files-message">
+                    Keine Datenbank geladen
+                </div>
+            </div>
+
+            <!-- Stats Footer -->
+            <div id="stats">
+                <span id="stats-text">Keine Dateien geladen</span>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map-container">
+            <div id="map"></div>
+            <div class="map-info" id="map-info" style="display: none;">
+                <h6 id="track-title">Track Name</h6>
+                <div class="info-row"><strong>Distanz:</strong> <span id="track-distance">-</span></div>
+                <div class="info-row"><strong>Waypoints:</strong> <span id="track-waypoints">-</span></div>
+                <div class="info-row"><strong>Upload:</strong> <span id="track-upload-date">-</span></div>
+                <div class="info-row"><strong>Kategorie:</strong> <span id="track-category">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SQL.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <!-- Leaflet JS for OpenStreetMap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let db = null;
+        let map = null;
+        let currentLayer = null;
+        let allFiles = [];
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([51.1657, 10.4515], 6); // Center on Germany
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        // Parse GPX data from blob
+        function parseGPX(gpxText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(gpxText, 'text/xml');
+
+            const tracks = [];
+            const waypoints = [];
+
+            // Parse tracks
+            const trkElements = xmlDoc.getElementsByTagName('trk');
+            for (let trk of trkElements) {
+                const trkName = trk.getElementsByTagName('name')[0]?.textContent || 'Unnamed Track';
+                const trksegs = trk.getElementsByTagName('trkseg');
+
+                for (let trkseg of trksegs) {
+                    const points = [];
+                    const trkpts = trkseg.getElementsByTagName('trkpt');
+
+                    for (let trkpt of trkpts) {
+                        const lat = parseFloat(trkpt.getAttribute('lat'));
+                        const lon = parseFloat(trkpt.getAttribute('lon'));
+                        const ele = trkpt.getElementsByTagName('ele')[0]?.textContent;
+
+                        points.push({ lat, lon, ele: ele ? parseFloat(ele) : null });
+                    }
+
+                    if (points.length > 0) {
+                        tracks.push({ name: trkName, points });
+                    }
+                }
+            }
+
+            // Parse waypoints
+            const wptElements = xmlDoc.getElementsByTagName('wpt');
+            for (let wpt of wptElements) {
+                const lat = parseFloat(wpt.getAttribute('lat'));
+                const lon = parseFloat(wpt.getAttribute('lon'));
+                const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Waypoint';
+                const desc = wpt.getElementsByTagName('desc')[0]?.textContent || '';
+                const ele = wpt.getElementsByTagName('ele')[0]?.textContent;
+
+                waypoints.push({
+                    lat, lon, name, desc,
+                    ele: ele ? parseFloat(ele) : null
+                });
+            }
+
+            return { tracks, waypoints };
+        }
+
+        // Calculate track distance in km
+        function calculateDistance(points) {
+            if (points.length < 2) return 0;
+
+            let totalDistance = 0;
+            for (let i = 1; i < points.length; i++) {
+                const p1 = points[i - 1];
+                const p2 = points[i];
+
+                // Haversine formula
+                const R = 6371; // Earth radius in km
+                const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+                const dLon = (p2.lon - p1.lon) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(p1.lat * Math.PI / 180) * Math.cos(p2.lat * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                totalDistance += R * c;
+            }
+
+            return totalDistance;
+        }
+
+        // Display GPX on map
+        function displayGPX(fileData) {
+            // Clear existing layers
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+
+            // Create layer group
+            currentLayer = L.layerGroup().addTo(map);
+
+            // Convert blob to text
+            const gpxText = new TextDecoder('utf-8').decode(fileData.file_blob);
+            const { tracks, waypoints } = parseGPX(gpxText);
+
+            let allPoints = [];
+            let totalDistance = 0;
+
+            // Draw tracks
+            tracks.forEach((track, idx) => {
+                const latLngs = track.points.map(p => [p.lat, p.lon]);
+                allPoints = allPoints.concat(latLngs);
+
+                const polyline = L.polyline(latLngs, {
+                    color: '#0d6efd',
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(currentLayer);
+
+                polyline.bindPopup(`<strong>${track.name}</strong>`);
+
+                totalDistance += calculateDistance(track.points);
+            });
+
+            // Draw waypoints with labels
+            waypoints.forEach(wpt => {
+                allPoints.push([wpt.lat, wpt.lon]);
+
+                const marker = L.marker([wpt.lat, wpt.lon], {
+                    icon: L.divIcon({
+                        className: 'waypoint-label',
+                        html: `<div style="background: white; padding: 4px 8px; border: 2px solid #dc3545; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${wpt.name}</div>`,
+                        iconSize: null,
+                        iconAnchor: [0, 0]
+                    })
+                }).addTo(currentLayer);
+
+                let popupContent = `<strong>${wpt.name}</strong>`;
+                if (wpt.desc) popupContent += `<br>${wpt.desc}`;
+                if (wpt.ele !== null) popupContent += `<br>Höhe: ${wpt.ele.toFixed(0)}m`;
+                marker.bindPopup(popupContent);
+            });
+
+            // Fit map to bounds
+            if (allPoints.length > 0) {
+                const bounds = L.latLngBounds(allPoints);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            // Update map info
+            document.getElementById('map-info').style.display = 'block';
+            document.getElementById('track-title').textContent = fileData.title;
+            document.getElementById('track-distance').textContent = totalDistance > 0 ? `${totalDistance.toFixed(2)} km` : '-';
+            document.getElementById('track-waypoints').textContent = waypoints.length;
+            document.getElementById('track-upload-date').textContent = fileData.upload_date || '-';
+            document.getElementById('track-category').textContent = fileData.category || '-';
+        }
+
+        // Load database
+        async function loadDatabase(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const SQL = await initSqlJs({
+                locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
+            });
+
+            db = new SQL.Database(new Uint8Array(arrayBuffer));
+
+            // Load all files
+            loadFiles();
+
+            // Hide upload section, show filters
+            document.getElementById('db-upload-section').style.display = 'none';
+            document.getElementById('filter-controls').style.display = 'block';
+        }
+
+        // Load files from database
+        function loadFiles() {
+            const result = db.exec(`
+                SELECT id, title, filename, category, upload_date,
+                       file_size, download_count, file_blob, blob_size
+                FROM files
+                WHERE file_blob IS NOT NULL
+                ORDER BY upload_date DESC
+            `);
+
+            if (result.length === 0) {
+                allFiles = [];
+                renderFileList([]);
+                return;
+            }
+
+            const columns = result[0].columns;
+            const rows = result[0].values;
+
+            allFiles = rows.map(row => {
+                const obj = {};
+                columns.forEach((col, idx) => {
+                    obj[col] = row[idx];
+                });
+                return obj;
+            });
+
+            // Populate category filter
+            const categories = [...new Set(allFiles.map(f => f.category).filter(Boolean))];
+            const categorySelect = document.getElementById('category-filter');
+            categorySelect.innerHTML = '<option value="">Alle Kategorien</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categorySelect.appendChild(option);
+            });
+
+            renderFileList(allFiles);
+        }
+
+        // Render file list
+        function renderFileList(files) {
+            const container = document.getElementById('file-list-container');
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="no-files">Keine Dateien gefunden</div>';
+                document.getElementById('stats-text').textContent = 'Keine Dateien gefunden';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-title">${file.title}</div>
+                    <div class="file-meta">
+                        ${file.category ? `📁 ${file.category}` : ''}
+                        ${file.upload_date ? `• 📅 ${file.upload_date}` : ''}
+                        ${file.blob_size ? `• 📦 ${(file.blob_size / 1024).toFixed(1)} KB` : ''}
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    // Remove selection from all items
+                    document.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+
+                    // Display on map
+                    displayGPX(file);
+                });
+
+                container.appendChild(item);
+            });
+
+            document.getElementById('stats-text').textContent = `${files.length} Dateien`;
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const category = document.getElementById('category-filter').value;
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+
+            let filtered = allFiles;
+
+            if (category) {
+                filtered = filtered.filter(f => f.category === category);
+            }
+
+            if (dateFrom) {
+                filtered = filtered.filter(f => !f.upload_date || f.upload_date >= dateFrom);
+            }
+
+            if (dateTo) {
+                filtered = filtered.filter(f => !f.upload_date || f.upload_date <= dateTo);
+            }
+
+            renderFileList(filtered);
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('category-filter').value = '';
+            document.getElementById('date-from').value = '';
+            document.getElementById('date-to').value = '';
+            renderFileList(allFiles);
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            initMap();
+
+            // File input handler
+            const fileInput = document.getElementById('db-file-input');
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    loadDatabase(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop
+            const uploadArea = document.getElementById('db-upload-area');
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+
+                if (e.dataTransfer.files.length > 0) {
+                    loadDatabase(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Filter change handlers
+            document.getElementById('category-filter').addEventListener('change', applyFilters);
+            document.getElementById('date-from').addEventListener('change', applyFilters);
+            document.getElementById('date-to').addEventListener('change', applyFilters);
+        });
+    </script>
+</body>
+</html>
