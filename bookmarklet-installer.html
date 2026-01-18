@@ -331,21 +331,18 @@ for row in cursor.fetchall():
         fetch('filebase-bookmarklet.js')
             .then(response => response.text())
             .then(code => {
-                // Light minification: only remove block comments and normalize whitespace
-                // DO NOT remove line comments with // because that breaks URLs like https://
-                const minified = code
-                    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments only
-                    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-                    .trim();
+                // No minification - just use the code as-is
+                // Minification was breaking template literals with HTML/CSS
+                // Modern browsers handle large bookmarklets just fine
 
                 // Create bookmarklet URL
-                const bookmarkletUrl = 'javascript:' + encodeURIComponent(minified);
+                const bookmarkletUrl = 'javascript:' + encodeURIComponent(code);
 
                 // Set the href
                 document.getElementById('bookmarklet-link').href = bookmarkletUrl;
 
                 console.log('Bookmarklet loaded successfully!');
-                console.log('Length:', bookmarkletUrl.length);
+                console.log('Length:', bookmarkletUrl.length, 'characters');
             })
             .catch(error => {
                 console.error('Error loading bookmarklet:', error);
