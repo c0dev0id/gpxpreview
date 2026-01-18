@@ -204,9 +204,9 @@
                 <!-- Filters (hidden until DB loaded) -->
                 <div id="filter-controls" style="display: none;">
                     <div class="mb-3">
-                        <label class="filter-label">Kategorie</label>
-                        <select class="form-select form-select-sm" id="category-filter">
-                            <option value="">Alle Kategorien</option>
+                        <label class="filter-label">Hochgeladen von</label>
+                        <select class="form-select form-select-sm" id="uploader-filter">
+                            <option value="">Alle Uploader</option>
                         </select>
                     </div>
 
@@ -219,6 +219,16 @@
                             <label class="filter-label">Bis</label>
                             <input type="date" class="form-control form-control-sm" id="date-to">
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="filter-label">Sortierung</label>
+                        <select class="form-select form-select-sm" id="sort-select">
+                            <option value="date-desc">Datum (neueste zuerst)</option>
+                            <option value="date-asc">Datum (älteste zuerst)</option>
+                            <option value="name-asc">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                        </select>
                     </div>
 
                     <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
@@ -255,7 +265,10 @@
                 <div class="info-row"><strong>Distanz:</strong> <span id="track-distance">-</span></div>
                 <div class="info-row"><strong>Waypoints:</strong> <span id="track-waypoints">-</span></div>
                 <div class="info-row"><strong>Upload:</strong> <span id="track-upload-date">-</span></div>
-                <div class="info-row"><strong>Kategorie:</strong> <span id="track-category">-</span></div>
+                <div class="info-row"><strong>Uploader:</strong> <span id="track-uploader">-</span></div>
+                <button class="btn btn-sm btn-success w-100 mt-2" id="download-gpx-btn" onclick="downloadCurrentGPX()">
+                    ⬇️ GPX herunterladen
+                </button>
                 <div class="info-row" style="margin-top: 8px; font-size: 11px; font-style: italic; opacity: 0.7;">
                     <div style="margin-bottom: 2px;"><span style="color: #0d6efd;">●</span> Blau = Aufgezeichneter Track</div>
                     <div style="margin-bottom: 2px;"><span style="color: #fd7e14;">●</span> Orange = Route (aus GPX-Routenpunkten)</div>
@@ -276,6 +289,7 @@
         let map = null;
         let currentLayer = null;
         let allFiles = [];
+        let currentFile = null; // Track current file for download
 
         const DB_NAME = 'GPXViewerDB';
         const DB_STORE = 'database';
@@ -555,6 +569,7 @@
             }
 
             // Update map info
+            currentFile = fileData; // Store for download
             document.getElementById('map-info').style.display = 'block';
             document.getElementById('track-title').textContent = fileData.title;
 
@@ -566,7 +581,25 @@
 
             document.getElementById('track-waypoints').textContent = waypoints.length;
             document.getElementById('track-upload-date').textContent = fileData.upload_date || '-';
-            document.getElementById('track-category').textContent = fileData.category || '-';
+            document.getElementById('track-uploader').textContent = fileData.uploader || '-';
+        }
+
+        // Download current GPX file
+        function downloadCurrentGPX() {
+            if (!currentFile || !currentFile.file_blob) {
+                alert('Keine Datei zum Herunterladen verfügbar');
+                return;
+            }
+
+            const blob = new Blob([currentFile.file_blob], { type: 'application/gpx+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentFile.filename || `${currentFile.title}.gpx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // IndexedDB helpers
@@ -706,24 +739,19 @@
                 return obj;
             });
 
-            // Populate category filter
-            const categories = [...new Set(allFiles.map(f => f.category).filter(Boolean))];
-            console.log(`Found ${categories.length} unique categories:`, categories);
-            console.log('Sample files with categories:', allFiles.slice(0, 5).map(f => ({ title: f.title, category: f.category })));
+            // Populate uploader filter
+            const uploaders = [...new Set(allFiles.map(f => f.uploader).filter(Boolean))];
+            console.log(`Found ${uploaders.length} unique uploaders:`, uploaders);
 
-            const categorySelect = document.getElementById('category-filter');
-            categorySelect.innerHTML = '<option value="">Alle Kategorien</option>';
+            const uploaderSelect = document.getElementById('uploader-filter');
+            uploaderSelect.innerHTML = '<option value="">Alle Uploader</option>';
 
-            if (categories.length === 0) {
-                console.warn('No categories found in database. All files have empty/null category field.');
-            } else {
-                categories.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat;
-                    option.textContent = cat;
-                    categorySelect.appendChild(option);
-                });
-            }
+            uploaders.forEach(uploader => {
+                const option = document.createElement('option');
+                option.value = uploader;
+                option.textContent = uploader;
+                uploaderSelect.appendChild(option);
+            });
 
             renderFileList(allFiles);
         }
@@ -767,18 +795,21 @@
             document.getElementById('stats-text').textContent = `${files.length} Dateien`;
         }
 
-        // Apply filters
+        // Apply filters and sorting
         function applyFilters() {
-            const category = document.getElementById('category-filter').value;
+            const uploader = document.getElementById('uploader-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
+            const sortBy = document.getElementById('sort-select').value;
 
-            let filtered = allFiles;
+            let filtered = [...allFiles];
 
-            if (category) {
-                filtered = filtered.filter(f => f.category === category);
+            // Apply uploader filter
+            if (uploader) {
+                filtered = filtered.filter(f => f.uploader === uploader);
             }
 
+            // Apply date filters
             if (dateFrom) {
                 filtered = filtered.filter(f => !f.upload_date || f.upload_date >= dateFrom);
             }
@@ -787,15 +818,32 @@
                 filtered = filtered.filter(f => !f.upload_date || f.upload_date <= dateTo);
             }
 
+            // Apply sorting
+            filtered.sort((a, b) => {
+                switch (sortBy) {
+                    case 'date-desc':
+                        return (b.upload_date || '').localeCompare(a.upload_date || '');
+                    case 'date-asc':
+                        return (a.upload_date || '').localeCompare(b.upload_date || '');
+                    case 'name-asc':
+                        return (a.title || '').localeCompare(b.title || '');
+                    case 'name-desc':
+                        return (b.title || '').localeCompare(a.title || '');
+                    default:
+                        return 0;
+                }
+            });
+
             renderFileList(filtered);
         }
 
         // Reset filters
         function resetFilters() {
-            document.getElementById('category-filter').value = '';
+            document.getElementById('uploader-filter').value = '';
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
-            renderFileList(allFiles);
+            document.getElementById('sort-select').value = 'date-desc';
+            applyFilters();
         }
 
         // Initialize
@@ -844,9 +892,10 @@
             });
 
             // Filter change handlers
-            document.getElementById('category-filter').addEventListener('change', applyFilters);
+            document.getElementById('uploader-filter').addEventListener('change', applyFilters);
             document.getElementById('date-from').addEventListener('change', applyFilters);
             document.getElementById('date-to').addEventListener('change', applyFilters);
+            document.getElementById('sort-select').addEventListener('change', applyFilters);
         });
     </script>
 </body>
