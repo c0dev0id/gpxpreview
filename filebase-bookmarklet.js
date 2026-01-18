@@ -375,7 +375,7 @@
                     const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
                     log(`Gefunden: ${paginationLinks.length} Pagination-Links`, 'info');
 
-                    let maxPage = currentPage;
+                    let maxPage = 0; // Start at 0, not currentPage!
 
                     paginationLinks.forEach(link => {
                         const href = link.getAttribute('href') || link.href;
@@ -405,11 +405,19 @@
                         updateProgress((currentPage / (currentPage + 1)) * 90);
                     }
 
-                    // Continue if we found pagination OR if maxPage wasn't detected yet
-                    if (currentPage < maxPage || (maxPage === currentPage && filesOnPage.length > 0)) {
+                    // Stop if we've reached the max page (determined on first page)
+                    if (totalPages && currentPage >= totalPages) {
+                        log(`Seite ${currentPage} von ${totalPages} erreicht. Stoppe.`, 'info');
+                        hasMorePages = false;
+                    } else if (totalPages && currentPage < totalPages) {
+                        // We know total pages and haven't reached it yet
                         currentPage++;
-                        log(`Weiter zu Seite ${currentPage}`, 'info');
-                        // Small delay to avoid hammering the server
+                        log(`Weiter zu Seite ${currentPage} von ${totalPages}`, 'info');
+                        await this.sleep(500);
+                    } else if (!totalPages && filesOnPage.length > 0) {
+                        // Fallback: no pagination detected, continue while finding files
+                        currentPage++;
+                        log(`Keine Pagination erkannt. Weiter zu Seite ${currentPage}`, 'info');
                         await this.sleep(500);
                     } else {
                         log(`Keine weiteren Seiten. Stoppe.`, 'info');
@@ -526,20 +534,30 @@
             }
 
             // Extract metadata from card meta section
-            const metaItems = element.querySelectorAll('.filebaseFileCardMeta li, .filebaseFileCardMeta');
+            const metaItems = element.querySelectorAll('.filebaseFileCardMeta li');
             metaItems.forEach(meta => {
                 const text = meta.textContent.trim();
 
-                // Try to identify uploader (usually contains username)
-                const userLink = meta.querySelector('a[href*="/user/"]');
-                if (userLink) {
-                    file.uploader = userLink.textContent.trim();
+                // Try to identify uploader (could be in <a>, <font>, or plain text)
+                if (!file.uploader) {
+                    const userLink = meta.querySelector('a[href*="/user/"]');
+                    const fontTag = meta.querySelector('font');
+                    if (userLink) {
+                        file.uploader = userLink.textContent.trim();
+                    } else if (fontTag) {
+                        file.uploader = fontTag.textContent.trim();
+                    } else if (meta.children.length === 0) {
+                        // Plain text in li, might be username
+                        file.uploader = text;
+                    }
                 }
 
-                // Try to identify date (look for time element)
-                const timeEl = meta.querySelector('time');
+                // Try to identify date (WoltLab uses woltlab-core-date-time custom element)
+                const timeEl = meta.querySelector('time, woltlab-core-date-time');
                 if (timeEl) {
-                    file.uploadDate = timeEl.getAttribute('datetime') || timeEl.textContent.trim();
+                    file.uploadDate = timeEl.getAttribute('datetime') ||
+                                     timeEl.getAttribute('date') ||
+                                     timeEl.textContent.trim();
                 }
             });
 
