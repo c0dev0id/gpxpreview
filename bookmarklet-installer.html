@@ -168,6 +168,12 @@
                     </ul>
                 </div>
 
+                <div class="alert alert-info">
+                    <strong>🔄 Auto-Update:</strong> Das Bookmarklet lädt bei jedem Klick automatisch die neueste Version
+                    von <code>https://home.codevoid.de/gpxpreview/filebase-bookmarklet.js</code>.
+                    Du musst es nicht neu installieren, wenn Updates verfügbar sind!
+                </div>
+
                 <h3 class="mt-4">Schritt-für-Schritt Anleitung:</h3>
 
                 <div class="step">
@@ -327,27 +333,26 @@ for row in cursor.fetchall():
     </div>
 
     <script>
-        // Load the bookmarklet code and create the link
-        fetch('filebase-bookmarklet.js')
-            .then(response => response.text())
-            .then(code => {
-                // No minification - just use the code as-is
-                // Minification was breaking template literals with HTML/CSS
-                // Modern browsers handle large bookmarklets just fine
+        // Create a simple loader bookmarklet that loads the latest code from remote URL
+        const loaderCode = `(function() {
+    const scriptUrl = 'https://home.codevoid.de/gpxpreview/filebase-bookmarklet.js';
+    const script = document.createElement('script');
+    script.src = scriptUrl + '?t=' + Date.now(); // Cache busting
+    script.onerror = function() {
+        alert('Fehler beim Laden des Bookmarklets von ' + scriptUrl);
+    };
+    document.head.appendChild(script);
+})();`;
 
-                // Create bookmarklet URL
-                const bookmarkletUrl = 'javascript:' + encodeURIComponent(code);
+        // Create bookmarklet URL
+        const bookmarkletUrl = 'javascript:' + encodeURIComponent(loaderCode);
 
-                // Set the href
-                document.getElementById('bookmarklet-link').href = bookmarkletUrl;
+        // Set the href
+        document.getElementById('bookmarklet-link').href = bookmarkletUrl;
 
-                console.log('Bookmarklet loaded successfully!');
-                console.log('Length:', bookmarkletUrl.length, 'characters');
-            })
-            .catch(error => {
-                console.error('Error loading bookmarklet:', error);
-                alert('Fehler beim Laden des Bookmarklets. Stelle sicher, dass filebase-bookmarklet.js im selben Ordner ist.');
-            });
+        console.log('Bookmarklet loader created successfully!');
+        console.log('Will load script from: https://home.codevoid.de/gpxpreview/filebase-bookmarklet.js');
+        console.log('Bookmarklet length:', bookmarkletUrl.length, 'characters');
     </script>
 </body>
 </html>
