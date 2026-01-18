@@ -485,7 +485,7 @@
                     }
 
                     // DIAGNOSTIC: Log decision factors
-                    log(`DECISION: currentPage=${currentPage}, totalPages=${totalPages}, filesOnPage=${filesOnPage.length}, maxPage=${maxPage}`, 'info');
+                    log(`DECISION: currentPage=${currentPage}, totalPages=${totalPages}, filesOnPage=${filesOnPage.length}`, 'info');
 
                     // Stop if we've reached the max page (determined on first page)
                     if (totalPages && currentPage >= totalPages) {
