@@ -225,6 +225,13 @@
                         Filter zurücksetzen
                     </button>
                 </div>
+
+                <!-- Clear Database Button (hidden until DB loaded) -->
+                <div id="clear-db-button" style="display: none; padding: 0 15px; margin-top: 10px;">
+                    <button class="btn btn-sm btn-outline-danger w-100" onclick="clearDatabase()">
+                        🗑️ Datenbank löschen
+                    </button>
+                </div>
             </div>
 
             <!-- File List -->
@@ -269,6 +276,10 @@
         let map = null;
         let currentLayer = null;
         let allFiles = [];
+
+        const DB_NAME = 'GPXViewerDB';
+        const DB_STORE = 'database';
+        const DB_KEY = 'gpx_database';
 
         // Initialize map
         function initMap() {
@@ -558,21 +569,114 @@
             document.getElementById('track-category').textContent = fileData.category || '-';
         }
 
-        // Load database
-        async function loadDatabase(file) {
-            const arrayBuffer = await file.arrayBuffer();
+        // IndexedDB helpers
+        function openIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(DB_STORE)) {
+                        db.createObjectStore(DB_STORE);
+                    }
+                };
+            });
+        }
+
+        async function saveToIndexedDB(data) {
+            const idb = await openIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = idb.transaction([DB_STORE], 'readwrite');
+                const store = transaction.objectStore(DB_STORE);
+                const request = store.put(data, DB_KEY);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function loadFromIndexedDB() {
+            const idb = await openIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = idb.transaction([DB_STORE], 'readonly');
+                const store = transaction.objectStore(DB_STORE);
+                const request = store.get(DB_KEY);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function clearIndexedDB() {
+            const idb = await openIndexedDB();
+            return new Promise((resolve, reject) => {
+                const transaction = idb.transaction([DB_STORE], 'readwrite');
+                const store = transaction.objectStore(DB_STORE);
+                const request = store.delete(DB_KEY);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Load database from file or ArrayBuffer
+        async function loadDatabase(input) {
+            let arrayBuffer;
+
+            if (input instanceof File) {
+                arrayBuffer = await input.arrayBuffer();
+            } else if (input instanceof ArrayBuffer || input instanceof Uint8Array) {
+                arrayBuffer = input;
+            } else {
+                throw new Error('Invalid input type for loadDatabase');
+            }
+
             const SQL = await initSqlJs({
                 locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
             });
 
             db = new SQL.Database(new Uint8Array(arrayBuffer));
 
+            // Save to IndexedDB for next time
+            if (input instanceof File) {
+                console.log('Saving database to IndexedDB...');
+                await saveToIndexedDB(arrayBuffer);
+            }
+
             // Load all files
             loadFiles();
 
-            // Hide upload section, show filters
+            // Hide upload section, show filters and clear button
             document.getElementById('db-upload-section').style.display = 'none';
             document.getElementById('filter-controls').style.display = 'block';
+            document.getElementById('clear-db-button').style.display = 'block';
+        }
+
+        // Clear database and reset UI
+        async function clearDatabase() {
+            if (confirm('Möchten Sie die Datenbank wirklich löschen? Sie müssen sie erneut hochladen.')) {
+                await clearIndexedDB();
+
+                // Reset state
+                db = null;
+                allFiles = [];
+
+                // Clear map
+                if (currentLayer) {
+                    map.removeLayer(currentLayer);
+                }
+                document.getElementById('map-info').style.display = 'none';
+
+                // Reset UI
+                document.getElementById('db-upload-section').style.display = 'block';
+                document.getElementById('filter-controls').style.display = 'none';
+                document.getElementById('clear-db-button').style.display = 'none';
+                document.getElementById('file-list-container').innerHTML = '<div class="no-files">Keine Datenbank geladen</div>';
+                document.getElementById('stats-text').textContent = 'Keine Dateien geladen';
+            }
         }
 
         // Load files from database
@@ -604,14 +708,22 @@
 
             // Populate category filter
             const categories = [...new Set(allFiles.map(f => f.category).filter(Boolean))];
+            console.log(`Found ${categories.length} unique categories:`, categories);
+            console.log('Sample files with categories:', allFiles.slice(0, 5).map(f => ({ title: f.title, category: f.category })));
+
             const categorySelect = document.getElementById('category-filter');
             categorySelect.innerHTML = '<option value="">Alle Kategorien</option>';
-            categories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat;
-                option.textContent = cat;
-                categorySelect.appendChild(option);
-            });
+
+            if (categories.length === 0) {
+                console.warn('No categories found in database. All files have empty/null category field.');
+            } else {
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelect.appendChild(option);
+                });
+            }
 
             renderFileList(allFiles);
         }
@@ -687,8 +799,21 @@
         }
 
         // Initialize
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             initMap();
+
+            // Try to load database from IndexedDB
+            try {
+                const storedDB = await loadFromIndexedDB();
+                if (storedDB) {
+                    console.log('Found database in IndexedDB, loading...');
+                    await loadDatabase(storedDB);
+                } else {
+                    console.log('No database found in IndexedDB');
+                }
+            } catch (error) {
+                console.log('Could not load from IndexedDB:', error);
+            }
 
             // File input handler
             const fileInput = document.getElementById('db-file-input');
