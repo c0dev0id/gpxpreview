@@ -105,6 +105,13 @@
             #filebase-downloader-box button.secondary:hover {
                 background: #c0392b;
             }
+            #filebase-downloader-box button.warning {
+                background: #f39c12;
+                margin-right: 10px;
+            }
+            #filebase-downloader-box button.warning:hover {
+                background: #e67e22;
+            }
             #filebase-downloader-box .stats {
                 display: grid;
                 grid-template-columns: repeat(3, 1fr);
@@ -150,6 +157,7 @@
             </div>
             <div class="log" id="log"></div>
             <div>
+                <button id="btn-stop" class="warning">⏹ Stoppen & Speichern</button>
                 <button id="btn-close" class="secondary">Abbrechen</button>
             </div>
         </div>
@@ -195,6 +203,7 @@
             this.totalSize = 0;
             this.SQL = null;
             this.db = null;
+            this.shouldStop = false; // Flag for graceful stop
         }
 
         async init() {
@@ -308,7 +317,7 @@
 
             const categories = new Map();
 
-            while (hasMorePages) {
+            while (hasMorePages && !this.shouldStop) {
                 try {
                     log(`Lade Seite ${currentPage}...`, 'info');
                     updateStatus(`Lade Seite ${currentPage}...`);
@@ -342,7 +351,7 @@
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `);
 
-                    filesOnPage.forEach(file => {
+                    filesOnPage.forEach((file, idx) => {
                         stmt.run([
                             file.title,
                             file.filename,
@@ -359,6 +368,11 @@
                         ]);
 
                         this.totalSize += file.fileSize || 0;
+
+                        // Log first file on first page for debugging
+                        if (currentPage === 1 && idx === 0) {
+                            log(`DEBUG erste Datei: title="${file.title}", size=${file.fileSize}, uploader="${file.uploader}", date="${file.uploadDate}"`, 'info');
+                        }
 
                         // Track categories
                         if (file.category) {
@@ -393,7 +407,7 @@
                     // Set total pages on first iteration
                     if (totalPages === null && maxPage > 0) {
                         totalPages = maxPage;
-                        log(`Insgesamt ${totalPages} Seiten gefunden`, 'success');
+                        log(`==> Insgesamt ${totalPages} Seiten gefunden`, 'success');
                     }
 
                     updateStats(totalFiles, currentPage, this.totalSize);
@@ -405,22 +419,28 @@
                         updateProgress((currentPage / (currentPage + 1)) * 90);
                     }
 
+                    // DIAGNOSTIC: Log decision factors
+                    log(`DECISION: currentPage=${currentPage}, totalPages=${totalPages}, filesOnPage=${filesOnPage.length}, maxPage=${maxPage}`, 'info');
+
                     // Stop if we've reached the max page (determined on first page)
                     if (totalPages && currentPage >= totalPages) {
-                        log(`Seite ${currentPage} von ${totalPages} erreicht. Stoppe.`, 'info');
+                        log(`==> STOPP: Seite ${currentPage} von ${totalPages} erreicht.`, 'success');
                         hasMorePages = false;
                     } else if (totalPages && currentPage < totalPages) {
                         // We know total pages and haven't reached it yet
                         currentPage++;
-                        log(`Weiter zu Seite ${currentPage} von ${totalPages}`, 'info');
+                        log(`==> WEITER: Zu Seite ${currentPage} von ${totalPages}`, 'info');
                         await this.sleep(500);
                     } else if (!totalPages && filesOnPage.length > 0) {
                         // Fallback: no pagination detected, continue while finding files
                         currentPage++;
-                        log(`Keine Pagination erkannt. Weiter zu Seite ${currentPage}`, 'info');
+                        log(`==> FALLBACK: Keine Pagination. Weiter zu Seite ${currentPage}`, 'info');
                         await this.sleep(500);
+                    } else if (!totalPages && filesOnPage.length === 0) {
+                        log(`==> STOPP: Keine Dateien mehr gefunden`, 'info');
+                        hasMorePages = false;
                     } else {
-                        log(`Keine weiteren Seiten. Stoppe.`, 'info');
+                        log(`==> STOPP: Unerwarteter Zustand - keine weiteren Seiten`, 'info');
                         hasMorePages = false;
                     }
 
@@ -437,8 +457,13 @@
             });
             catStmt.free();
 
-            log(`Scan abgeschlossen: ${totalFiles} Dateien gefunden`, 'success');
-            updateStatus(`${totalFiles} Dateien gefunden`);
+            if (this.shouldStop) {
+                log(`Scan gestoppt bei Seite ${currentPage - 1}: ${totalFiles} Dateien gefunden`, 'info');
+                updateStatus(`Gestoppt: ${totalFiles} Dateien gefunden`);
+            } else {
+                log(`Scan abgeschlossen: ${totalFiles} Dateien gefunden`, 'success');
+                updateStatus(`${totalFiles} Dateien gefunden`);
+            }
             updateProgress(90);
         }
 
@@ -719,6 +744,17 @@
     // Start the downloader
     log('Initialisiere Filebase Downloader...', 'info');
     const downloader = new FilebaseDownloader();
+
+    // Stop button handler
+    document.getElementById('btn-stop').addEventListener('click', () => {
+        if (confirm('Download stoppen und bisherige Dateien speichern?')) {
+            log('STOP-Button gedrückt - beende nach aktueller Seite...', 'info');
+            downloader.shouldStop = true;
+            document.getElementById('btn-stop').disabled = true;
+            document.getElementById('btn-stop').textContent = '⏳ Wird gestoppt...';
+        }
+    });
+
     downloader.init();
 
 })();
