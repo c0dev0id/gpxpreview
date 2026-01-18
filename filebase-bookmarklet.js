@@ -373,10 +373,13 @@
 
                     // Check for pagination and determine total pages (on first page)
                     const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
+                    log(`Gefunden: ${paginationLinks.length} Pagination-Links`, 'info');
+
                     let maxPage = currentPage;
 
                     paginationLinks.forEach(link => {
-                        const match = link.href.match(/pageNo=(\d+)/);
+                        const href = link.getAttribute('href') || link.href;
+                        const match = href.match(/pageNo=(\d+)/);
                         if (match) {
                             const pageNum = parseInt(match[1]);
                             if (pageNum > maxPage) {
@@ -385,10 +388,12 @@
                         }
                     });
 
+                    log(`Maximale Seitenzahl erkannt: ${maxPage}`, 'info');
+
                     // Set total pages on first iteration
                     if (totalPages === null && maxPage > 0) {
                         totalPages = maxPage;
-                        log(`Insgesamt ${totalPages} Seiten gefunden`, 'info');
+                        log(`Insgesamt ${totalPages} Seiten gefunden`, 'success');
                     }
 
                     updateStats(totalFiles, currentPage, this.totalSize);
@@ -400,11 +405,14 @@
                         updateProgress((currentPage / (currentPage + 1)) * 90);
                     }
 
-                    if (currentPage < maxPage) {
+                    // Continue if we found pagination OR if maxPage wasn't detected yet
+                    if (currentPage < maxPage || (maxPage === currentPage && filesOnPage.length > 0)) {
                         currentPage++;
+                        log(`Weiter zu Seite ${currentPage}`, 'info');
                         // Small delay to avoid hammering the server
                         await this.sleep(500);
                     } else {
+                        log(`Keine weiteren Seiten. Stoppe.`, 'info');
                         hasMorePages = false;
                     }
 
