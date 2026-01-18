@@ -274,7 +274,9 @@
                     download_url TEXT,
                     page_url TEXT,
                     file_id INTEGER,
-                    metadata TEXT
+                    metadata TEXT,
+                    file_blob BLOB,
+                    blob_size INTEGER
                 );
             `);
 
@@ -328,6 +330,16 @@
                         : `${filebaseUrl}?sortField=time&sortOrder=DESC&pageNo=${currentPage}`;
 
                     const html = await this.fetchPage(pageUrl);
+
+                    // Extract total pages from raw HTML (before parsing) on first page
+                    if (totalPages === null) {
+                        const paginationMatch = html.match(/<woltlab-core-pagination[^>]*\scount="(\d+)"/);
+                        if (paginationMatch) {
+                            totalPages = parseInt(paginationMatch[1]);
+                            log(`==> Insgesamt ${totalPages} Seiten gefunden (woltlab-core-pagination regex)`, 'success');
+                        }
+                    }
+
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
 
@@ -342,16 +354,56 @@
 
                     log(`${filesOnPage.length} Dateien auf Seite ${currentPage} gefunden`, 'success');
 
-                    // Insert files into database
+                    // Process files one by one (download + insert into database)
                     const stmt = this.db.prepare(`
                         INSERT INTO files (
                             title, filename, description, category, upload_date,
                             uploader, file_size, download_count, download_url,
-                            page_url, file_id, metadata
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            page_url, file_id, metadata, file_blob, blob_size
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     `);
 
-                    filesOnPage.forEach((file, idx) => {
+                    for (let idx = 0; idx < filesOnPage.length; idx++) {
+                        if (this.shouldStop) break;
+
+                        const file = filesOnPage[idx];
+                        let fileBlob = null;
+                        let blobSize = 0;
+
+                        // Download the actual file
+                        try {
+                            updateStatus(`Seite ${currentPage}: Lade Datei ${idx + 1}/${filesOnPage.length}: ${file.title.substring(0, 40)}...`);
+
+                            // Get download URL from detail page
+                            if (file.pageUrl) {
+                                const downloadUrl = await this.getDownloadUrlFromDetailPage(file.pageUrl);
+                                if (downloadUrl) {
+                                    file.downloadUrl = downloadUrl;
+
+                                    // Download the file
+                                    fileBlob = await this.downloadFile(downloadUrl);
+                                    if (fileBlob) {
+                                        blobSize = fileBlob.length;
+                                        // Only log every 10th file to reduce spam
+                                        if (totalFiles % 10 === 0) {
+                                            log(`✓ ${totalFiles} Dateien heruntergeladen (${(this.totalSize / (1024 * 1024)).toFixed(1)} MB)`, 'success');
+                                        }
+                                    } else {
+                                        log(`✗ Download fehlgeschlagen: ${file.title}`, 'error');
+                                    }
+                                } else {
+                                    log(`✗ Keine Download-URL gefunden: ${file.title}`, 'error');
+                                }
+                            }
+
+                            // Small delay to avoid overwhelming the server
+                            await this.sleep(100);
+
+                        } catch (error) {
+                            log(`Fehler beim Download von "${file.title}": ${error.message}`, 'error');
+                        }
+
+                        // Insert into database
                         stmt.run([
                             file.title,
                             file.filename,
@@ -364,10 +416,12 @@
                             file.downloadUrl,
                             file.pageUrl,
                             file.fileId,
-                            JSON.stringify(file.metadata)
+                            JSON.stringify(file.metadata),
+                            fileBlob,
+                            blobSize
                         ]);
 
-                        this.totalSize += file.fileSize || 0;
+                        this.totalSize += blobSize;
 
                         // Log first file on first page for debugging
                         if (currentPage === 1 && idx === 0) {
@@ -378,31 +432,22 @@
                         if (file.category) {
                             categories.set(file.category, (categories.get(file.category) || 0) + 1);
                         }
-                    });
+
+                        totalFiles++;
+                        this.files.push(file);
+
+                        // Update stats in real-time
+                        updateStats(totalFiles, currentPage, this.totalSize);
+                    }
 
                     stmt.free();
 
-                    totalFiles += filesOnPage.length;
-                    this.files.push(...filesOnPage);
-
-                    // Check for pagination and determine total pages (on first page)
-                    // First try to get total pages from woltlab-core-pagination element
-                    const woltlabPagination = doc.querySelector('woltlab-core-pagination');
-                    if (woltlabPagination && totalPages === null) {
-                        const count = woltlabPagination.getAttribute('count');
-                        if (count) {
-                            totalPages = parseInt(count);
-                            log(`==> Insgesamt ${totalPages} Seiten gefunden (woltlab-core-pagination)`, 'success');
-                        }
-                    }
-
-                    // Fallback: extract from pagination links
+                    // Fallback: if totalPages still null, try extracting from pagination links
                     if (totalPages === null) {
                         const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
                         log(`Gefunden: ${paginationLinks.length} Pagination-Links`, 'info');
 
-                        let maxPage = 0; // Start at 0, not currentPage!
-
+                        let maxPage = 0;
                         paginationLinks.forEach(link => {
                             const href = link.getAttribute('href') || link.href;
                             const match = href.match(/pageNo=(\d+)/);
@@ -414,12 +459,9 @@
                             }
                         });
 
-                        log(`Maximale Seitenzahl erkannt: ${maxPage}`, 'info');
-
-                        // Set total pages on first iteration
                         if (maxPage > 0) {
                             totalPages = maxPage;
-                            log(`==> Insgesamt ${totalPages} Seiten gefunden (pagination links)`, 'success');
+                            log(`==> Insgesamt ${totalPages} Seiten gefunden (pagination links fallback)`, 'success');
                         }
                     }
 
@@ -713,6 +755,50 @@
             if (url.startsWith('//')) return 'https:' + url;
             if (url.startsWith('/')) return CONFIG.baseUrl + url;
             return url;
+        }
+
+        async getDownloadUrlFromDetailPage(pageUrl) {
+            try {
+                const html = await this.fetchPage(pageUrl);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Look for download button with itemprop="downloadUrl"
+                const downloadLink = doc.querySelector('a[itemprop="downloadUrl"]');
+                if (downloadLink) {
+                    return this.makeAbsoluteUrl(downloadLink.href);
+                }
+
+                // Fallback: look for any download link
+                const fallbackLink = doc.querySelector('a[href*="/file-download/"], a.downloadButton');
+                if (fallbackLink) {
+                    return this.makeAbsoluteUrl(fallbackLink.href);
+                }
+
+                console.log(`Keine Download-URL auf Detail-Seite gefunden: ${pageUrl}`);
+                return null;
+            } catch (error) {
+                console.error(`Fehler beim Abrufen der Detail-Seite: ${error.message}`);
+                return null;
+            }
+        }
+
+        async downloadFile(downloadUrl) {
+            try {
+                const response = await fetch(downloadUrl, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                return new Uint8Array(arrayBuffer);
+            } catch (error) {
+                log(`Fehler beim Download: ${error.message}`, 'error');
+                return null;
+            }
         }
 
         async exportDatabase() {
