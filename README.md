@@ -1,9 +1,49 @@
-# Motorradfreunde Filebase Viewer
+# Motorradfreunde Filebase Tools
 
-A standalone HTML application to view and download files from the Motorradfreunde Rheinneckar forum filebase.
+Tools to access and download files from the Motorradfreunde Rheinneckar forum filebase.
 
-## Features
+## 🚀 Quick Start (Recommended)
 
+**Use the Bookmarklet** - No CORS issues, no hosting needed!
+
+1. Open `bookmarklet-installer.html` in your browser
+2. Drag the bookmarklet to your bookmarks bar
+3. Visit motorradfreunde-rheinneckar.de and log in
+4. Click the bookmarklet to download the entire filebase as SQLite database
+
+---
+
+## Available Tools
+
+### 1. 🔖 Bookmarklet Downloader (Recommended)
+
+**Files:** `bookmarklet-installer.html` + `filebase-bookmarklet.js`
+
+**Features:**
+- ✅ **No CORS issues** - Runs directly on the forum page
+- ✅ **Complete SQLite export** - Downloads entire filebase with all metadata
+- ✅ **No hosting needed** - Works as a browser bookmark
+- ✅ **Automatic pagination** - Scans all pages automatically
+- ✅ **Full metadata** - Title, description, category, uploader, date, size, download count
+- ✅ **Progress tracking** - Live UI showing progress
+- ✅ **100% secure** - All code runs locally in your browser
+
+**How to use:**
+1. Open `bookmarklet-installer.html`
+2. Follow the installation instructions
+3. Click the bookmarklet while logged into the forum
+4. Wait for the SQLite database to download
+
+**Database Schema:**
+- `files` table: All file entries with complete metadata
+- `categories` table: Category statistics
+- `metadata` table: Download information
+
+### 2. 📱 Standalone Web Viewer
+
+**File:** `filebase-viewer.html`
+
+**Features:**
 - ✅ Pure client-side JavaScript (jQuery + Bootstrap)
 - ✅ Modern, responsive UI
 - ✅ Secure authentication
@@ -11,9 +51,15 @@ A standalone HTML application to view and download files from the Motorradfreund
 - ✅ Multiple API fallback strategies
 - ✅ File listing and download
 
+**Note:** This tool requires hosting on the forum domain due to CORS restrictions.
+
 ## Usage
 
-### Option 1: Host on the Forum Domain (Recommended)
+### Bookmarklet (Recommended)
+
+See detailed instructions in `bookmarklet-installer.html`
+
+### Standalone Viewer - Option 1: Host on the Forum Domain
 
 To avoid CORS issues, upload `filebase-viewer.html` to the Motorradfreunde server:
 
@@ -214,8 +260,58 @@ If you encounter issues:
 3. Test your credentials on the forum website
 4. Check browser console (F12) for errors
 
+## Bookmarklet Technical Details
+
+### How it Works
+
+1. **Injection**: The bookmarklet runs JavaScript on the current page
+2. **SQL.js Loading**: Loads the sql.js library from CDN
+3. **UI Overlay**: Creates a beautiful progress interface
+4. **Scraping**: Navigates through all filebase pages
+5. **Parsing**: Extracts file metadata using multiple selector strategies
+6. **Database Creation**: Builds SQLite database with all data
+7. **Export**: Downloads the .sqlite file to your computer
+
+### Metadata Collected
+
+For each file:
+- Title
+- Filename
+- Description
+- Category
+- Upload date
+- Uploader name
+- File size (in bytes)
+- Download count
+- Download URL
+- Page URL
+- Internal file ID
+- Additional metadata (tags, preview availability, etc.)
+
+### Opening the SQLite Database
+
+**Desktop Tools:**
+- DB Browser for SQLite: https://sqlitebrowser.org/
+- DBeaver: https://dbeaver.io/
+- SQLiteStudio: https://sqlitestudio.pl/
+
+**Online:**
+- SQLite Viewer: https://inloop.github.io/sqlite-viewer/
+
+**Python:**
+```python
+import sqlite3
+conn = sqlite3.connect('motorradfreunde-filebase-2026-01-18.sqlite')
+cursor = conn.cursor()
+cursor.execute('SELECT title, uploader, upload_date FROM files ORDER BY upload_date DESC')
+for row in cursor.fetchall():
+    print(row)
+```
+
 ## References
 
 - [WoltLab Suite RPC API Documentation](https://docs.woltlab.com/6.1/php/api/rpc_api/)
 - [WoltLab Suite JavaScript API](https://docs.woltlab.com/6.1/javascript/components_rpc_api/)
 - [CORS Explained (MDN)](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+- [SQL.js Library](https://github.com/sql-js/sql.js)
+- [DB Browser for SQLite](https://sqlitebrowser.org/)
