@@ -304,6 +304,7 @@
             let currentPage = 1;
             let hasMorePages = true;
             let totalFiles = 0;
+            let totalPages = null; // Will be determined from first page
 
             const categories = new Map();
 
@@ -312,9 +313,10 @@
                     log(`Lade Seite ${currentPage}...`, 'info');
                     updateStatus(`Lade Seite ${currentPage}...`);
 
+                    // WoltLab uses sortField and sortOrder params along with pageNo
                     const pageUrl = currentPage === 1
                         ? filebaseUrl
-                        : `${filebaseUrl}?pageNo=${currentPage}`;
+                        : `${filebaseUrl}?sortField=time&sortOrder=DESC&pageNo=${currentPage}`;
 
                     const html = await this.fetchPage(pageUrl);
                     const parser = new DOMParser();
@@ -369,17 +371,41 @@
                     totalFiles += filesOnPage.length;
                     this.files.push(...filesOnPage);
 
-                    updateStats(totalFiles, currentPage, this.totalSize);
-                    updateProgress((currentPage / (currentPage + 1)) * 90); // Reserve 10% for export
+                    // Check for pagination and determine total pages (on first page)
+                    const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
+                    let maxPage = currentPage;
 
-                    // Check for next page
-                    const nextPageLink = doc.querySelector('.pagination .next, a[rel="next"]');
-                    if (!nextPageLink || nextPageLink.classList.contains('disabled')) {
-                        hasMorePages = false;
+                    paginationLinks.forEach(link => {
+                        const match = link.href.match(/pageNo=(\d+)/);
+                        if (match) {
+                            const pageNum = parseInt(match[1]);
+                            if (pageNum > maxPage) {
+                                maxPage = pageNum;
+                            }
+                        }
+                    });
+
+                    // Set total pages on first iteration
+                    if (totalPages === null && maxPage > 0) {
+                        totalPages = maxPage;
+                        log(`Insgesamt ${totalPages} Seiten gefunden`, 'info');
+                    }
+
+                    updateStats(totalFiles, currentPage, this.totalSize);
+
+                    // Calculate progress based on total pages if known
+                    if (totalPages) {
+                        updateProgress((currentPage / totalPages) * 90); // Reserve 10% for export
                     } else {
+                        updateProgress((currentPage / (currentPage + 1)) * 90);
+                    }
+
+                    if (currentPage < maxPage) {
                         currentPage++;
                         // Small delay to avoid hammering the server
                         await this.sleep(500);
+                    } else {
+                        hasMorePages = false;
                     }
 
                 } catch (error) {
@@ -479,68 +505,68 @@
                 metadata: {}
             };
 
-            // Extract title
-            const titleEl = element.querySelector('.fileTitle, .title, h3, .contentTitle, a.filename');
+            // Extract file ID from data attributes (WoltLab specific)
+            file.fileId = element.getAttribute('data-file-id') ||
+                         element.getAttribute('data-object-id') ||
+                         null;
+
+            // Extract title from WoltLab Filebase Card structure
+            const titleEl = element.querySelector('.filebaseFileCardTitle a, .filebaseFileCardLink');
             if (titleEl) {
                 file.title = titleEl.textContent.trim();
-                const titleLink = titleEl.querySelector('a') || (titleEl.tagName === 'A' ? titleEl : null);
-                if (titleLink) {
-                    file.pageUrl = this.makeAbsoluteUrl(titleLink.href);
+                file.pageUrl = this.makeAbsoluteUrl(titleEl.href);
+            }
+
+            // Extract metadata from card meta section
+            const metaItems = element.querySelectorAll('.filebaseFileCardMeta li, .filebaseFileCardMeta');
+            metaItems.forEach(meta => {
+                const text = meta.textContent.trim();
+
+                // Try to identify uploader (usually contains username)
+                const userLink = meta.querySelector('a[href*="/user/"]');
+                if (userLink) {
+                    file.uploader = userLink.textContent.trim();
                 }
-            }
 
-            // Extract filename
-            const filenameEl = element.querySelector('.filename, .fileName');
-            if (filenameEl) {
-                file.filename = filenameEl.textContent.trim();
-            }
+                // Try to identify date (look for time element)
+                const timeEl = meta.querySelector('time');
+                if (timeEl) {
+                    file.uploadDate = timeEl.getAttribute('datetime') || timeEl.textContent.trim();
+                }
+            });
 
-            // Extract description
-            const descEl = element.querySelector('.description, .fileDescription, .contentDescription');
+            // Extract description from card body/content
+            const descEl = element.querySelector('.filebaseFileCardBody, .filebaseFileCardDescription, .description');
             if (descEl) {
                 file.description = descEl.textContent.trim();
             }
 
-            // Extract category
-            const categoryEl = element.querySelector('.category, .fileCategory, .badge');
+            // Extract category/labels
+            const categoryEl = element.querySelector('.badge, .label, .filebaseFileCardLabel');
             if (categoryEl) {
                 file.category = categoryEl.textContent.trim();
             }
 
-            // Extract uploader
-            const uploaderEl = element.querySelector('.username, .uploader, .author');
-            if (uploaderEl) {
-                file.uploader = uploaderEl.textContent.trim();
-            }
-
-            // Extract date
-            const dateEl = element.querySelector('time, .datetime, .uploadDate');
-            if (dateEl) {
-                file.uploadDate = dateEl.getAttribute('datetime') || dateEl.textContent.trim();
-            }
-
-            // Extract file size
-            const sizeEl = element.querySelector('.fileSize, .size');
+            // Extract file size from card stats
+            const sizeEl = element.querySelector('.filebaseFileCardStats .fileSize, .size, [title*="Größe"], [title*="Size"]');
             if (sizeEl) {
                 file.fileSize = this.parseFileSize(sizeEl.textContent.trim());
             }
 
-            // Extract download count
-            const dlCountEl = element.querySelector('.downloads, .downloadCount');
+            // Extract download count from card stats or footer
+            const dlCountEl = element.querySelector('.filebaseFileCardStats .downloads, .downloadCount, [title*="Downloads"]');
             if (dlCountEl) {
-                file.downloadCount = parseInt(dlCountEl.textContent.replace(/\D/g, '')) || 0;
+                const match = dlCountEl.textContent.match(/(\d+)\s*(Download|Heruntergeladen)/i);
+                if (match) {
+                    file.downloadCount = parseInt(match[1]) || 0;
+                }
             }
 
-            // Extract download URL
+            // Extract download URL (note: might need to visit detail page to get actual file URL)
             const downloadLink = element.querySelector('a[href*="download"], a.downloadButton, .downloadButton a');
             if (downloadLink) {
                 file.downloadUrl = this.makeAbsoluteUrl(downloadLink.href);
             }
-
-            // Extract file ID from data attributes
-            file.fileId = element.getAttribute('data-file-id') ||
-                         element.getAttribute('data-object-id') ||
-                         null;
 
             // Store additional metadata
             file.metadata = {
