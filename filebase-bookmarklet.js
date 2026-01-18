@@ -386,28 +386,41 @@
                     this.files.push(...filesOnPage);
 
                     // Check for pagination and determine total pages (on first page)
-                    const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
-                    log(`Gefunden: ${paginationLinks.length} Pagination-Links`, 'info');
-
-                    let maxPage = 0; // Start at 0, not currentPage!
-
-                    paginationLinks.forEach(link => {
-                        const href = link.getAttribute('href') || link.href;
-                        const match = href.match(/pageNo=(\d+)/);
-                        if (match) {
-                            const pageNum = parseInt(match[1]);
-                            if (pageNum > maxPage) {
-                                maxPage = pageNum;
-                            }
+                    // First try to get total pages from woltlab-core-pagination element
+                    const woltlabPagination = doc.querySelector('woltlab-core-pagination');
+                    if (woltlabPagination && totalPages === null) {
+                        const count = woltlabPagination.getAttribute('count');
+                        if (count) {
+                            totalPages = parseInt(count);
+                            log(`==> Insgesamt ${totalPages} Seiten gefunden (woltlab-core-pagination)`, 'success');
                         }
-                    });
+                    }
 
-                    log(`Maximale Seitenzahl erkannt: ${maxPage}`, 'info');
+                    // Fallback: extract from pagination links
+                    if (totalPages === null) {
+                        const paginationLinks = doc.querySelectorAll('.pagination__link, .pagination a');
+                        log(`Gefunden: ${paginationLinks.length} Pagination-Links`, 'info');
 
-                    // Set total pages on first iteration
-                    if (totalPages === null && maxPage > 0) {
-                        totalPages = maxPage;
-                        log(`==> Insgesamt ${totalPages} Seiten gefunden`, 'success');
+                        let maxPage = 0; // Start at 0, not currentPage!
+
+                        paginationLinks.forEach(link => {
+                            const href = link.getAttribute('href') || link.href;
+                            const match = href.match(/pageNo=(\d+)/);
+                            if (match) {
+                                const pageNum = parseInt(match[1]);
+                                if (pageNum > maxPage) {
+                                    maxPage = pageNum;
+                                }
+                            }
+                        });
+
+                        log(`Maximale Seitenzahl erkannt: ${maxPage}`, 'info');
+
+                        // Set total pages on first iteration
+                        if (maxPage > 0) {
+                            totalPages = maxPage;
+                            log(`==> Insgesamt ${totalPages} Seiten gefunden (pagination links)`, 'success');
+                        }
                     }
 
                     updateStats(totalFiles, currentPage, this.totalSize);
