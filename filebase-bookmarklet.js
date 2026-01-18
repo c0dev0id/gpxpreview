@@ -372,35 +372,45 @@
 
                         // Download the actual file
                         try {
-                            updateStatus(`Seite ${currentPage}: Lade Datei ${idx + 1}/${filesOnPage.length}: ${file.title.substring(0, 40)}...`);
+                            const shortTitle = file.title.substring(0, 40);
+                            updateStatus(`Seite ${currentPage}: Lade Datei ${idx + 1}/${filesOnPage.length}: ${shortTitle}...`);
 
                             // Get download URL from detail page
                             if (file.pageUrl) {
+                                log(`[${totalFiles + 1}] Besuche Detail-Seite: ${file.title}`, 'info');
                                 const downloadUrl = await this.getDownloadUrlFromDetailPage(file.pageUrl);
+
                                 if (downloadUrl) {
                                     file.downloadUrl = downloadUrl;
 
                                     // Download the file
+                                    log(`[${totalFiles + 1}] Lade Datei herunter...`, 'info');
                                     fileBlob = await this.downloadFile(downloadUrl);
+
                                     if (fileBlob) {
                                         blobSize = fileBlob.length;
-                                        // Only log every 10th file to reduce spam
-                                        if (totalFiles % 10 === 0) {
-                                            log(`✓ ${totalFiles} Dateien heruntergeladen (${(this.totalSize / (1024 * 1024)).toFixed(1)} MB)`, 'success');
+                                        log(`✓ [${totalFiles + 1}] "${file.title}" - ${blobSize} bytes gespeichert`, 'success');
+
+                                        // Log progress every 5 files
+                                        if ((totalFiles + 1) % 5 === 0) {
+                                            log(`==> Fortschritt: ${totalFiles + 1} Dateien, ${(this.totalSize / (1024 * 1024)).toFixed(1)} MB`, 'info');
                                         }
                                     } else {
-                                        log(`✗ Download fehlgeschlagen: ${file.title}`, 'error');
+                                        log(`✗ [${totalFiles + 1}] Download fehlgeschlagen (null returned): ${file.title}`, 'error');
                                     }
                                 } else {
-                                    log(`✗ Keine Download-URL gefunden: ${file.title}`, 'error');
+                                    log(`✗ [${totalFiles + 1}] Keine Download-URL gefunden: ${file.title}`, 'error');
                                 }
+                            } else {
+                                log(`✗ [${totalFiles + 1}] Keine pageUrl vorhanden: ${file.title}`, 'error');
                             }
 
                             // Small delay to avoid overwhelming the server
-                            await this.sleep(100);
+                            await this.sleep(200);
 
                         } catch (error) {
-                            log(`Fehler beim Download von "${file.title}": ${error.message}`, 'error');
+                            log(`✗ [${totalFiles + 1}] Fehler bei "${file.title}": ${error.message}`, 'error');
+                            console.error(error);
                         }
 
                         // Insert into database
@@ -766,37 +776,55 @@
                 // Look for download button with itemprop="downloadUrl"
                 const downloadLink = doc.querySelector('a[itemprop="downloadUrl"]');
                 if (downloadLink) {
-                    return this.makeAbsoluteUrl(downloadLink.href);
+                    const url = this.makeAbsoluteUrl(downloadLink.href);
+                    console.log(`✓ Download-URL gefunden: ${url}`);
+                    return url;
                 }
 
                 // Fallback: look for any download link
                 const fallbackLink = doc.querySelector('a[href*="/file-download/"], a.downloadButton');
                 if (fallbackLink) {
-                    return this.makeAbsoluteUrl(fallbackLink.href);
+                    const url = this.makeAbsoluteUrl(fallbackLink.href);
+                    console.log(`✓ Download-URL gefunden (Fallback): ${url}`);
+                    return url;
                 }
 
-                console.log(`Keine Download-URL auf Detail-Seite gefunden: ${pageUrl}`);
+                log(`✗ Keine Download-URL auf Detail-Seite gefunden: ${pageUrl}`, 'error');
                 return null;
             } catch (error) {
-                console.error(`Fehler beim Abrufen der Detail-Seite: ${error.message}`);
+                log(`✗ Fehler beim Abrufen der Detail-Seite: ${error.message}`, 'error');
                 return null;
             }
         }
 
         async downloadFile(downloadUrl) {
             try {
+                console.log(`Downloading: ${downloadUrl}`);
                 const response = await fetch(downloadUrl, {
                     credentials: 'include'
                 });
+
+                console.log(`Response status: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const arrayBuffer = await response.arrayBuffer();
-                return new Uint8Array(arrayBuffer);
+                const fileData = new Uint8Array(arrayBuffer);
+
+                console.log(`✓ Downloaded ${fileData.length} bytes`);
+
+                // Validate we got actual file content
+                if (fileData.length === 0) {
+                    log(`⚠ Warnung: Heruntergeladene Datei ist leer (0 bytes)`, 'error');
+                    return null;
+                }
+
+                return fileData;
             } catch (error) {
-                log(`Fehler beim Download: ${error.message}`, 'error');
+                log(`✗ Fehler beim Download: ${error.message}`, 'error');
+                console.error(`Download failed for ${downloadUrl}:`, error);
                 return null;
             }
         }
