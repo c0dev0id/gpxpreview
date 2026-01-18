@@ -331,10 +331,10 @@ for row in cursor.fetchall():
         fetch('filebase-bookmarklet.js')
             .then(response => response.text())
             .then(code => {
-                // Minify: remove comments and extra whitespace
+                // Light minification: only remove block comments and normalize whitespace
+                // DO NOT remove line comments with // because that breaks URLs like https://
                 const minified = code
-                    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments
-                    .replace(/\/\/.*/g, '') // Remove line comments
+                    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments only
                     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
                     .trim();
 
