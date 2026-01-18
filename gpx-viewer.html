@@ -251,8 +251,8 @@
                 <div class="info-row"><strong>Kategorie:</strong> <span id="track-category">-</span></div>
                 <div class="info-row" style="margin-top: 8px; font-size: 11px; font-style: italic; opacity: 0.7;">
                     <div style="margin-bottom: 2px;"><span style="color: #0d6efd;">●</span> Blau = Aufgezeichneter Track</div>
-                    <div style="margin-bottom: 2px;"><span style="color: #fd7e14;">●</span> Orange = Geplante Route (GPX)</div>
-                    <div><span style="color: #28a745;">●</span> Grün 🤖 = Generiert (OSRM)</div>
+                    <div style="margin-bottom: 2px;"><span style="color: #fd7e14;">●</span> Orange = Route (aus GPX-Routenpunkten)</div>
+                    <div><span style="color: #28a745;">●</span> Grün = Route (aus Wegpunkten)</div>
                 </div>
             </div>
         </div>
@@ -428,17 +428,23 @@
             let totalDistance = 0;
             let isGeneratedRoute = false;
 
-            // Priority: tracks > routes > waypoints (with OSRM)
+            // Priority: tracks (use as-is) > routes (OSRM) > waypoints (OSRM)
             if (tracks.length === 0 && routes.length > 0) {
-                // Use routes directly (no OSRM needed - these are planned routes)
-                console.log('No tracks found, using route elements...');
-                routes.forEach(route => {
-                    tracks.push({
-                        name: route.name,
-                        points: route.points,
-                        isRoute: true
-                    });
-                });
+                // Generate route from route points using OSRM
+                console.log('No tracks found, generating route from route points via OSRM...');
+                for (const route of routes) {
+                    const generatedRoute = await generateRouteFromWaypoints(route.points);
+
+                    if (generatedRoute) {
+                        tracks.push({
+                            name: route.name,
+                            points: generatedRoute.points,
+                            isRoute: true
+                        });
+                        totalDistance += generatedRoute.distance;
+                        isGeneratedRoute = true;
+                    }
+                }
             } else if (tracks.length === 0 && routes.length === 0 && waypoints.length >= 2) {
                 // Last resort: generate route from waypoints using OSRM
                 console.log('No tracks or routes found, generating route from waypoints via OSRM...');
@@ -446,7 +452,7 @@
 
                 if (generatedRoute) {
                     tracks.push({
-                        name: 'Generated Route',
+                        name: 'Generated Route (Waypoints)',
                         points: generatedRoute.points,
                         generated: true
                     });
@@ -479,9 +485,9 @@
 
                 let popupText = `<strong>${track.name}</strong>`;
                 if (track.generated) {
-                    popupText += '<br><small>🤖 Automatisch generierte Route (OSRM)</small>';
+                    popupText += '<br><small>🤖 Route aus Wegpunkten (OSRM)</small>';
                 } else if (track.isRoute) {
-                    popupText += '<br><small>📍 Geplante Route (GPX)</small>';
+                    popupText += '<br><small>📍 Route aus GPX-Routenpunkten (OSRM)</small>';
                 }
                 polyline.bindPopup(popupText);
 
