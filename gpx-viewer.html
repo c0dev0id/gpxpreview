@@ -250,7 +250,9 @@
                 <div class="info-row"><strong>Upload:</strong> <span id="track-upload-date">-</span></div>
                 <div class="info-row"><strong>Kategorie:</strong> <span id="track-category">-</span></div>
                 <div class="info-row" style="margin-top: 8px; font-size: 11px; font-style: italic; opacity: 0.7;">
-                    🤖 = Automatisch generierte Route via OSRM
+                    <div style="margin-bottom: 2px;"><span style="color: #0d6efd;">●</span> Blau = Aufgezeichneter Track</div>
+                    <div style="margin-bottom: 2px;"><span style="color: #fd7e14;">●</span> Orange = Geplante Route (GPX)</div>
+                    <div><span style="color: #28a745;">●</span> Grün 🤖 = Generiert (OSRM)</div>
                 </div>
             </div>
         </div>
@@ -284,6 +286,7 @@
             const xmlDoc = parser.parseFromString(gpxText, 'text/xml');
 
             const tracks = [];
+            const routes = [];
             const waypoints = [];
 
             // Parse tracks
@@ -310,6 +313,30 @@
                 }
             }
 
+            // Parse routes
+            const rteElements = xmlDoc.getElementsByTagName('rte');
+            for (let rte of rteElements) {
+                const rteName = rte.getElementsByTagName('name')[0]?.textContent || 'Unnamed Route';
+                const points = [];
+                const rtepts = rte.getElementsByTagName('rtept');
+
+                for (let rtept of rtepts) {
+                    const lat = parseFloat(rtept.getAttribute('lat'));
+                    const lon = parseFloat(rtept.getAttribute('lon'));
+                    const name = rtept.getElementsByTagName('name')[0]?.textContent || '';
+                    const ele = rtept.getElementsByTagName('ele')[0]?.textContent;
+
+                    points.push({
+                        lat, lon, name,
+                        ele: ele ? parseFloat(ele) : null
+                    });
+                }
+
+                if (points.length > 0) {
+                    routes.push({ name: rteName, points });
+                }
+            }
+
             // Parse waypoints
             const wptElements = xmlDoc.getElementsByTagName('wpt');
             for (let wpt of wptElements) {
@@ -325,7 +352,7 @@
                 });
             }
 
-            return { tracks, waypoints };
+            return { tracks, routes, waypoints };
         }
 
         // Calculate track distance in km
@@ -395,15 +422,26 @@
 
             // Convert blob to text
             const gpxText = new TextDecoder('utf-8').decode(fileData.file_blob);
-            const { tracks, waypoints } = parseGPX(gpxText);
+            const { tracks, routes, waypoints } = parseGPX(gpxText);
 
             let allPoints = [];
             let totalDistance = 0;
             let isGeneratedRoute = false;
 
-            // If no tracks but we have waypoints, generate route
-            if (tracks.length === 0 && waypoints.length >= 2) {
-                console.log('No tracks found, generating route from waypoints...');
+            // Priority: tracks > routes > waypoints (with OSRM)
+            if (tracks.length === 0 && routes.length > 0) {
+                // Use routes directly (no OSRM needed - these are planned routes)
+                console.log('No tracks found, using route elements...');
+                routes.forEach(route => {
+                    tracks.push({
+                        name: route.name,
+                        points: route.points,
+                        isRoute: true
+                    });
+                });
+            } else if (tracks.length === 0 && routes.length === 0 && waypoints.length >= 2) {
+                // Last resort: generate route from waypoints using OSRM
+                console.log('No tracks or routes found, generating route from waypoints via OSRM...');
                 const generatedRoute = await generateRouteFromWaypoints(waypoints);
 
                 if (generatedRoute) {
@@ -417,21 +455,34 @@
                 }
             }
 
-            // Draw tracks
+            // Draw tracks (including converted routes)
             tracks.forEach((track, idx) => {
                 const latLngs = track.points.map(p => [p.lat, p.lon]);
                 allPoints = allPoints.concat(latLngs);
 
+                // Color scheme: blue=track, orange=route, green=generated
+                let color = '#0d6efd'; // blue for tracks
+                let dashArray = null;
+                if (track.isRoute) {
+                    color = '#fd7e14'; // orange for routes
+                } else if (track.generated) {
+                    color = '#28a745'; // green for OSRM generated
+                    dashArray = '10, 10';
+                }
+
                 const polyline = L.polyline(latLngs, {
-                    color: track.generated ? '#28a745' : '#0d6efd',
+                    color: color,
                     weight: 4,
                     opacity: 0.7,
-                    dashArray: track.generated ? '10, 10' : null
+                    dashArray: dashArray
                 }).addTo(currentLayer);
 
-                const popupText = track.generated
-                    ? `<strong>${track.name}</strong><br><small>🤖 Automatisch generierte Route (OSRM)</small>`
-                    : `<strong>${track.name}</strong>`;
+                let popupText = `<strong>${track.name}</strong>`;
+                if (track.generated) {
+                    popupText += '<br><small>🤖 Automatisch generierte Route (OSRM)</small>';
+                } else if (track.isRoute) {
+                    popupText += '<br><small>📍 Geplante Route (GPX)</small>';
+                }
                 polyline.bindPopup(popupText);
 
                 if (!isGeneratedRoute) {
@@ -456,6 +507,28 @@
                 if (wpt.desc) popupContent += `<br>${wpt.desc}`;
                 if (wpt.ele !== null) popupContent += `<br>Höhe: ${wpt.ele.toFixed(0)}m`;
                 marker.bindPopup(popupContent);
+            });
+
+            // Draw named route points as markers
+            routes.forEach(route => {
+                route.points.forEach(rtept => {
+                    if (rtept.name && rtept.name.trim() !== '') {
+                        allPoints.push([rtept.lat, rtept.lon]);
+
+                        const marker = L.marker([rtept.lat, rtept.lon], {
+                            icon: L.divIcon({
+                                className: 'routepoint-label',
+                                html: `<div style="background: white; padding: 4px 8px; border: 2px solid #fd7e14; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${rtept.name}</div>`,
+                                iconSize: null,
+                                iconAnchor: [0, 0]
+                            })
+                        }).addTo(currentLayer);
+
+                        let popupContent = `<strong>${rtept.name}</strong><br><small>Route Point</small>`;
+                        if (rtept.ele !== null) popupContent += `<br>Höhe: ${rtept.ele.toFixed(0)}m`;
+                        marker.bindPopup(popupContent);
+                    }
+                });
             });
 
             // Fit map to bounds
