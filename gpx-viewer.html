@@ -187,7 +187,7 @@
         #map-container {
             position: relative;
             background: #1a1a1a;
-            padding: 16px 16px 12px 16px;
+            padding: 8px 8px 6px 8px;
             flex-shrink: 0;
         }
 
@@ -214,7 +214,7 @@
             flex: 1;
             overflow-y: auto;
             background: var(--bg-light);
-            padding: 16px;
+            padding: 8px;
         }
 
         #controls-area::-webkit-scrollbar {
@@ -354,41 +354,41 @@
 
         .map-info {
             background: var(--bg-white);
-            padding: 16px;
-            border-radius: 12px;
+            padding: 8px;
+            border-radius: 6px;
             box-shadow: var(--shadow-md);
             border: 1px solid var(--border-color);
-            margin-bottom: 16px;
+            margin-bottom: 8px;
         }
 
         .map-info h6 {
-            margin: 0 0 12px 0;
-            font-size: 16px;
+            margin: 0 0 6px 0;
+            font-size: 11px;
             font-weight: 700;
             color: var(--text-primary);
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid var(--bg-light);
+            gap: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--bg-light);
         }
 
         .map-info h6 i {
-            font-size: 16px;
+            font-size: 11px;
             color: var(--primary-color);
         }
 
         .map-info .info-row {
-            font-size: 13px;
-            margin-bottom: 8px;
+            font-size: 10px;
+            margin-bottom: 4px;
             color: var(--text-secondary);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .map-info .info-row i {
-            width: 18px;
+            width: 14px;
             text-align: center;
             color: var(--primary-color);
         }
@@ -396,13 +396,13 @@
         .map-info .info-row strong {
             color: var(--text-primary);
             font-weight: 600;
-            min-width: 70px;
+            min-width: 55px;
         }
 
         .controls-panel {
             background: var(--bg-white);
-            padding: 16px;
-            border-radius: 12px;
+            padding: 8px;
+            border-radius: 6px;
             box-shadow: var(--shadow-md);
             border: 1px solid var(--border-color);
         }
@@ -413,13 +413,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             color: var(--text-primary);
-            padding: 10px 12px;
+            padding: 6px 8px;
             background: var(--bg-light);
-            border-radius: 8px;
+            border-radius: 4px;
             transition: all 0.2s;
         }
 
@@ -444,7 +444,7 @@
 
         .controls-panel-content {
             display: none;
-            padding: 12px 0;
+            padding: 6px 0;
         }
 
         .controls-panel-content.expanded {
@@ -464,35 +464,35 @@
         }
 
         .control-group {
-            margin-bottom: 14px;
+            margin-bottom: 6px;
             background: var(--bg-light);
-            padding: 12px;
-            border-radius: 8px;
+            padding: 6px;
+            border-radius: 4px;
         }
 
         .control-label {
-            font-size: 11px;
+            font-size: 9px;
             font-weight: 700;
             color: var(--text-secondary);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         .control-label i {
             color: var(--primary-color);
-            font-size: 11px;
+            font-size: 9px;
         }
 
         .control-input {
             width: 100%;
-            font-size: 13px;
-            border-radius: 6px;
+            font-size: 10px;
+            border-radius: 4px;
             border: 1px solid var(--border-color);
-            padding: 8px 12px;
+            padding: 4px 6px;
             transition: all 0.2s;
         }
 
@@ -505,11 +505,11 @@
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            padding: 8px;
-            margin-bottom: 6px;
-            border-radius: 6px;
+            gap: 6px;
+            font-size: 10px;
+            padding: 4px;
+            margin-bottom: 3px;
+            border-radius: 4px;
             transition: background 0.2s;
         }
 
@@ -518,8 +518,8 @@
         }
 
         .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
             accent-color: var(--primary-color);
         }
@@ -533,19 +533,19 @@
 
         .color-picker-wrapper {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             align-items: center;
-            padding: 8px;
+            padding: 4px;
             background: var(--bg-white);
-            border-radius: 6px;
-            margin-bottom: 6px;
+            border-radius: 4px;
+            margin-bottom: 3px;
         }
 
         .color-picker {
-            width: 48px;
-            height: 32px;
-            border: 2px solid var(--border-color);
-            border-radius: 6px;
+            width: 32px;
+            height: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -556,7 +556,7 @@
         }
 
         .color-picker-wrapper label {
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 600;
             color: var(--text-primary);
             margin: 0;
@@ -848,6 +848,17 @@
         .export-btn i {
             font-size: 14px;
         }
+
+        /* Compact Bootstrap button overrides */
+        .btn {
+            font-size: 10px;
+            padding: 4px 8px;
+        }
+
+        .btn-sm {
+            font-size: 9px;
+            padding: 3px 6px;
+        }
     </style>
 </head>
 <body>
@@ -993,21 +1004,21 @@
                     <i class="fa-solid fa-user"></i>
                     <strong>Uploader:</strong> <span id="track-uploader">-</span>
                 </div>
-                <button class="btn btn-success w-100 mt-3" id="download-gpx-btn" onclick="downloadCurrentGPX()">
-                    <i class="fa-solid fa-download me-2"></i>GPX herunterladen
+                <button class="btn btn-success btn-sm w-100 mt-2" id="download-gpx-btn" onclick="downloadCurrentGPX()" style="font-size: 10px; padding: 4px 8px;">
+                    <i class="fa-solid fa-download me-1"></i>GPX herunterladen
                 </button>
-                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-secondary);">
-                    <div style="margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-circle" style="color: #0d6efd; font-size: 8px;"></i>
-                        <span>Blau = Aufgezeichneter Track</span>
+                <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-color); font-size: 9px; color: var(--text-secondary);">
+                    <div style="margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-circle" style="color: #0d6efd; font-size: 6px;"></i>
+                        <span>Blau = Track</span>
                     </div>
-                    <div style="margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-circle" style="color: #fd7e14; font-size: 8px;"></i>
-                        <span>Orange = Route (aus GPX-Routenpunkten)</span>
+                    <div style="margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-circle" style="color: #fd7e14; font-size: 6px;"></i>
+                        <span>Orange = Route</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-circle" style="color: #28a745; font-size: 8px;"></i>
-                        <span>Grün = Route (aus Wegpunkten)</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-circle" style="color: #28a745; font-size: 6px;"></i>
+                        <span>Grün = Generiert</span>
                     </div>
                 </div>
 
@@ -1059,8 +1070,8 @@
                     </div>
                 </div>
 
-                <div style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 12px; padding: 12px; background: var(--bg-white); border-radius: 8px;">
-                    <i class="fa-solid fa-info-circle me-1"></i>Klicken Sie auf Punkte in der Karte, um sie individuell anzupassen
+                <div style="font-size: 9px; color: var(--text-secondary); text-align: center; margin-top: 6px; padding: 6px; background: var(--bg-white); border-radius: 4px;">
+                    <i class="fa-solid fa-info-circle me-1"></i>Klicken Sie auf Punkte um sie anzupassen
                 </div>
             </div>
             </div><!-- End controls-area -->
