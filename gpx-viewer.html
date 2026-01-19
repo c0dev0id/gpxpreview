@@ -563,45 +563,26 @@
             flex: 1;
         }
 
-        .icon-selector {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-        }
 
-        .icon-option {
-            aspect-ratio: 1;
-            padding: 8px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 18px;
+        /* Point Editor Side Panel */
+        .point-editor-panel {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100vh;
             background: var(--bg-white);
-            transition: all 0.2s;
+            box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
-            align-items: center;
-            justify-content: center;
+            flex-direction: column;
         }
 
-        .icon-option:hover {
-            border-color: var(--primary-color);
-            background: #eff6ff;
-            transform: scale(1.05);
+        .point-editor-panel.active {
+            right: 0;
         }
 
-        .icon-option.selected {
-            border-color: var(--primary-color);
-            background: var(--primary-color);
-            color: white;
-            box-shadow: var(--shadow-md);
-        }
-
-        .icon-option i {
-            font-size: 18px;
-        }
-
-        /* Individual Point Editor Modal */
         .point-editor-overlay {
             display: none;
             position: fixed;
@@ -609,12 +590,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.3);
             z-index: 9999;
-            justify-content: center;
-            align-items: center;
             animation: fadeIn 0.2s ease-out;
+        }
+
+        .point-editor-overlay.active {
+            display: block;
         }
 
         @keyframes fadeIn {
@@ -626,160 +608,168 @@
             }
         }
 
-        .point-editor-overlay.active {
-            display: flex;
-        }
-
-        .point-editor-modal {
-            background: var(--bg-white);
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            width: 90%;
-            max-width: 360px;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 18px;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
         .point-editor-header {
+            padding: 16px;
+            background: var(--primary-color);
+            color: white;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 14px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid var(--bg-light);
-        }
-
-        .point-editor-header-content {
-            flex: 1;
+            align-items: center;
+            flex-shrink: 0;
         }
 
         .point-editor-header h6 {
-            margin: 0 0 6px 0;
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .point-editor-header h6 i {
-            color: var(--primary-color);
+        .point-editor-header i {
             font-size: 14px;
         }
 
         .point-editor-close {
-            background: var(--bg-light);
+            background: rgba(255, 255, 255, 0.2);
             border: none;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
-            color: var(--text-secondary);
+            color: white;
             padding: 0;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: 4px;
             transition: all 0.2s;
+            flex-shrink: 0;
+            margin-left: 12px;
         }
 
         .point-editor-close:hover {
-            background: var(--danger-color);
-            color: white;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .point-editor-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .point-editor-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .point-editor-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .point-editor-content::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .point-editor-actions {
+            padding: 12px 16px;
+            background: var(--bg-light);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
         .point-editor-group {
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .point-editor-label {
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 11px;
+            font-weight: 600;
             color: var(--text-secondary);
             margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .point-editor-label i {
-            color: var(--primary-color);
-            font-size: 11px;
+            display: block;
         }
 
         .point-editor-input {
             width: 100%;
-            font-size: 12px;
+            font-size: 13px;
             padding: 8px 10px;
-            border-radius: 6px;
-            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
             transition: all 0.2s;
         }
 
         .point-editor-input:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
         }
 
         .point-editor-input:read-only {
             background: var(--bg-light);
             color: var(--text-secondary);
+            border-color: transparent;
         }
 
-        .point-type-badge {
-            display: inline-flex;
+        .point-editor-checkbox {
+            display: flex;
             align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
+            gap: 8px;
+            padding: 8px 0;
+        }
+
+        .point-editor-checkbox input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .point-editor-checkbox label {
+            font-size: 13px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .point-icon-picker {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .point-icon-option {
+            aspect-ratio: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .point-type-badge i {
-            font-size: 10px;
-        }
-
-        .point-type-waypoint {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .point-type-routepoint {
-            background: var(--warning-color);
-            color: white;
-        }
-
-        .custom-marker-preview {
-            padding: 16px;
-            background: var(--bg-light);
-            border-radius: 6px;
+            cursor: pointer;
             text-align: center;
-            font-size: 20px;
-            min-height: 60px;
+            font-size: 16px;
+            background: var(--bg-white);
+            transition: all 0.15s;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px dashed var(--border-color);
+        }
+
+        .point-icon-option:hover {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+
+        .point-icon-option.selected {
+            border-color: var(--primary-color);
+            border-width: 2px;
+            background: var(--primary-color);
+            color: white;
         }
 
         /* Map Layer Switcher */
@@ -1021,13 +1011,12 @@
                     </div>
                 </div>
 
-                <!-- Element Modification Controls -->
+                <!-- Display Controls -->
                 <div class="controls-panel">
-                    <div class="controls-panel-header" id="controls-panel-header-btn" onclick="toggleControlsPanel()">
-                        <span><i class="fa-solid fa-sliders"></i>Darstellung anpassen</span>
-                        <i class="fa-solid fa-chevron-down toggle-icon" id="controls-toggle-icon"></i>
+                    <div class="controls-panel-header">
+                        <span><i class="fa-solid fa-sliders"></i>Anzeige-Einstellungen</span>
                     </div>
-                    <div class="controls-panel-content" id="controls-panel-content">
+                    <div class="controls-panel-content expanded">
                         <!-- Visibility Controls -->
                         <div class="control-group">
                             <label class="control-label">Sichtbarkeit</label>
@@ -1045,61 +1034,15 @@
                             </div>
                         </div>
 
-                        <!-- Waypoint Icon Selector -->
-                        <div class="control-group">
-                            <label class="control-label">
-                                <i class="fa-solid fa-icons"></i>
-                                Wegpunkt-Icon
-                            </label>
-                            <div class="icon-selector">
-                                <div class="icon-option selected" data-icon="fa-location-dot" onclick="selectIcon('fa-location-dot')">
-                                    <i class="fa-solid fa-location-dot"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-flag" onclick="selectIcon('fa-flag')">
-                                    <i class="fa-solid fa-flag"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-star" onclick="selectIcon('fa-star')">
-                                    <i class="fa-solid fa-star"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-flag-checkered" onclick="selectIcon('fa-flag-checkered')">
-                                    <i class="fa-solid fa-flag-checkered"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-circle" onclick="selectIcon('fa-circle')">
-                                    <i class="fa-solid fa-circle"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-map-pin" onclick="selectIcon('fa-map-pin')">
-                                    <i class="fa-solid fa-map-pin"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-mountain" onclick="selectIcon('fa-mountain')">
-                                    <i class="fa-solid fa-mountain"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-campground" onclick="selectIcon('fa-campground')">
-                                    <i class="fa-solid fa-campground"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-utensils" onclick="selectIcon('fa-utensils')">
-                                    <i class="fa-solid fa-utensils"></i>
-                                </div>
-                                <div class="icon-option" data-icon="fa-house" onclick="selectIcon('fa-house')">
-                                    <i class="fa-solid fa-house"></i>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Line Width Control -->
                         <div class="control-group">
-                            <label class="control-label">
-                                <i class="fa-solid fa-ruler-horizontal"></i>
-                                Linienbreite: <span id="line-width-value">4</span>px
-                            </label>
+                            <label class="control-label">Linienbreite: <span id="line-width-value">4</span>px</label>
                             <input type="range" class="form-range control-input" id="line-width" min="1" max="10" value="4" oninput="updateLineWidth(this.value)">
                         </div>
 
                         <!-- Line Color Control -->
                         <div class="control-group">
-                            <label class="control-label">
-                                <i class="fa-solid fa-palette"></i>
-                                Linienfarbe
-                            </label>
+                            <label class="control-label">Linienfarben</label>
                             <div class="color-picker-wrapper">
                                 <input type="color" class="color-picker" id="track-color" value="#0d6efd" onchange="updateDisplay()">
                                 <label for="track-color">Track</label>
@@ -1113,140 +1056,92 @@
                                 <label for="generated-color">Generiert</label>
                             </div>
                         </div>
-
-                        <!-- Reset Button -->
-                        <button class="btn btn-outline-secondary w-100" onclick="resetDisplaySettings()">
-                            <i class="fa-solid fa-rotate-left me-2"></i>Zurücksetzen
-                        </button>
                     </div>
+                </div>
+
+                <div style="font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 12px; padding: 12px; background: var(--bg-white); border-radius: 8px;">
+                    <i class="fa-solid fa-info-circle me-1"></i>Klicken Sie auf Punkte in der Karte, um sie individuell anzupassen
                 </div>
             </div>
             </div><!-- End controls-area -->
         </div><!-- End content-area -->
     </div><!-- End app-container -->
 
-    <!-- Individual Point Editor Modal -->
-    <div class="point-editor-overlay" id="point-editor-overlay" onclick="closePointEditor(event)">
-        <div class="point-editor-modal" onclick="event.stopPropagation()">
-            <div class="point-editor-header">
-                <div class="point-editor-header-content">
-                    <h6><i class="fa-solid fa-pen-to-square"></i><span id="point-editor-title">Punkt bearbeiten</span></h6>
-                    <span id="point-editor-type" class="point-type-badge"></span>
-                </div>
-                <button class="point-editor-close" onclick="closePointEditor()">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+    <!-- Point Editor Slide-Out Panel -->
+    <div class="point-editor-overlay" id="point-editor-overlay" onclick="closePointEditor()"></div>
+    <div class="point-editor-panel" id="point-editor-panel">
+        <div class="point-editor-header">
+            <h6><i class="fa-solid fa-pen-to-square"></i><span id="point-editor-title">Point Editor</span></h6>
+            <button class="point-editor-close" onclick="closePointEditor()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="point-editor-content">
+            <div class="point-editor-group">
+                <label class="point-editor-label">Name</label>
+                <input type="text" class="point-editor-input" id="point-name" readonly>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-tag"></i>
-                    Name
-                </label>
-                <input type="text" class="form-control point-editor-input" id="point-name" readonly>
-            </div>
-
-            <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-eye"></i>
-                    Sichtbarkeit
-                </label>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="point-visible" checked onchange="updatePointPreview()">
+                <div class="point-editor-checkbox">
+                    <input type="checkbox" id="point-visible" checked>
                     <label for="point-visible">Punkt anzeigen</label>
                 </div>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="point-label-visible" checked onchange="updatePointPreview()">
+                <div class="point-editor-checkbox">
+                    <input type="checkbox" id="point-label-visible" checked>
                     <label for="point-label-visible">Beschriftung anzeigen</label>
                 </div>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-icons"></i>
-                    Icon
-                </label>
-                <div class="icon-selector">
-                    <div class="icon-option" data-icon="fa-location-dot" onclick="selectPointIcon('fa-location-dot')">
+                <label class="point-editor-label">Icon</label>
+                <div class="point-icon-picker">
+                    <div class="point-icon-option" data-icon="fa-location-dot" onclick="selectPointIcon('fa-location-dot')">
                         <i class="fa-solid fa-location-dot"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-flag" onclick="selectPointIcon('fa-flag')">
+                    <div class="point-icon-option" data-icon="fa-flag" onclick="selectPointIcon('fa-flag')">
                         <i class="fa-solid fa-flag"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-star" onclick="selectPointIcon('fa-star')">
+                    <div class="point-icon-option" data-icon="fa-star" onclick="selectPointIcon('fa-star')">
                         <i class="fa-solid fa-star"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-flag-checkered" onclick="selectPointIcon('fa-flag-checkered')">
-                        <i class="fa-solid fa-flag-checkered"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-circle" onclick="selectPointIcon('fa-circle')">
-                        <i class="fa-solid fa-circle"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-map-pin" onclick="selectPointIcon('fa-map-pin')">
-                        <i class="fa-solid fa-map-pin"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-mountain" onclick="selectPointIcon('fa-mountain')">
+                    <div class="point-icon-option" data-icon="fa-mountain" onclick="selectPointIcon('fa-mountain')">
                         <i class="fa-solid fa-mountain"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-campground" onclick="selectPointIcon('fa-campground')">
-                        <i class="fa-solid fa-campground"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-utensils" onclick="selectPointIcon('fa-utensils')">
+                    <div class="point-icon-option" data-icon="fa-utensils" onclick="selectPointIcon('fa-utensils')">
                         <i class="fa-solid fa-utensils"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-house" onclick="selectPointIcon('fa-house')">
+                    <div class="point-icon-option" data-icon="fa-house" onclick="selectPointIcon('fa-house')">
                         <i class="fa-solid fa-house"></i>
                     </div>
-                    <div class="icon-option" data-icon="fa-tree" onclick="selectPointIcon('fa-tree')">
-                        <i class="fa-solid fa-tree"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-water" onclick="selectPointIcon('fa-water')">
-                        <i class="fa-solid fa-water"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-gas-pump" onclick="selectPointIcon('fa-gas-pump')">
-                        <i class="fa-solid fa-gas-pump"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-hospital" onclick="selectPointIcon('fa-hospital')">
-                        <i class="fa-solid fa-hospital"></i>
-                    </div>
-                    <div class="icon-option" data-icon="fa-camera" onclick="selectPointIcon('fa-camera')">
+                    <div class="point-icon-option" data-icon="fa-camera" onclick="selectPointIcon('fa-camera')">
                         <i class="fa-solid fa-camera"></i>
+                    </div>
+                    <div class="point-icon-option" data-icon="fa-circle" onclick="selectPointIcon('fa-circle')">
+                        <i class="fa-solid fa-circle"></i>
                     </div>
                 </div>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-palette"></i>
-                    Rahmenfarbe
-                </label>
-                <input type="color" class="form-control point-editor-input" id="point-border-color" onchange="updatePointPreview()">
+                <label class="point-editor-label">Farbe</label>
+                <input type="color" class="point-editor-input" id="point-border-color">
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-note-sticky"></i>
-                    Notizen
-                </label>
-                <textarea class="form-control point-editor-input" id="point-notes" rows="3" placeholder="Persönliche Notizen zu diesem Punkt..."></textarea>
+                <label class="point-editor-label">Notizen</label>
+                <textarea class="point-editor-input" id="point-notes" rows="3" placeholder="Notizen..."></textarea>
             </div>
+        </div>
 
-            <div class="point-editor-group">
-                <label class="point-editor-label">
-                    <i class="fa-solid fa-eye"></i>
-                    Vorschau
-                </label>
-                <div class="custom-marker-preview" id="point-preview"></div>
-            </div>
-
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-fill" onclick="savePointCustomization()">
-                    <i class="fa-solid fa-check me-2"></i>Speichern
-                </button>
-                <button class="btn btn-outline-secondary flex-fill" onclick="resetPointCustomization()">
-                    <i class="fa-solid fa-rotate-left me-2"></i>Zurücksetzen
-                </button>
-            </div>
+        <div class="point-editor-actions">
+            <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="resetPointCustomization()">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button class="btn btn-sm btn-primary flex-fill" onclick="savePointCustomization()">
+                <i class="fa-solid fa-check me-1"></i>Speichern
+            </button>
         </div>
     </div>
 
@@ -2029,33 +1924,6 @@
         }
 
         // Display control functions
-        function toggleControlsPanel() {
-            const content = document.getElementById('controls-panel-content');
-            const header = document.getElementById('controls-panel-header-btn');
-
-            if (content.classList.contains('expanded')) {
-                content.classList.remove('expanded');
-                header.classList.remove('expanded');
-            } else {
-                content.classList.add('expanded');
-                header.classList.add('expanded');
-            }
-        }
-
-        function selectIcon(icon) {
-            displaySettings.waypointIcon = icon;
-
-            // Update visual selection
-            document.querySelectorAll('.icon-option').forEach(el => {
-                if (el.getAttribute('data-icon') === icon) {
-                    el.classList.add('selected');
-                } else {
-                    el.classList.remove('selected');
-                }
-            });
-
-            updateDisplay();
-        }
 
         function updateLineWidth(value) {
             displaySettings.lineWidth = parseInt(value);
@@ -2123,18 +1991,8 @@
             const pointId = getPointId(point, type);
             const customization = pointCustomizations[pointId] || {};
 
-            // Set modal title
+            // Set panel title
             document.getElementById('point-editor-title').textContent = point.name;
-
-            // Set point type badge
-            const typeBadge = document.getElementById('point-editor-type');
-            if (type === 'waypoint') {
-                typeBadge.innerHTML = '<i class="fa-solid fa-location-dot"></i>Wegpunkt';
-                typeBadge.className = 'point-type-badge point-type-waypoint';
-            } else {
-                typeBadge.innerHTML = '<i class="fa-solid fa-route"></i>Routenpunkt';
-                typeBadge.className = 'point-type-badge point-type-routepoint';
-            }
 
             // Set current values
             document.getElementById('point-name').value = point.name;
@@ -2144,7 +2002,7 @@
 
             // Set icon
             const icon = customization.icon || (type === 'waypoint' ? displaySettings.waypointIcon : 'fa-location-dot');
-            document.querySelectorAll('#point-editor-overlay .icon-option').forEach(el => {
+            document.querySelectorAll('.point-icon-option').forEach(el => {
                 if (el.getAttribute('data-icon') === icon) {
                     el.classList.add('selected');
                 } else {
@@ -2156,56 +2014,26 @@
             const borderColor = customization.borderColor || (type === 'waypoint' ? '#dc3545' : '#fd7e14');
             document.getElementById('point-border-color').value = borderColor;
 
-            // Update preview
-            updatePointPreview();
-
-            // Show modal
+            // Show panel
             document.getElementById('point-editor-overlay').classList.add('active');
+            document.getElementById('point-editor-panel').classList.add('active');
         }
 
-        function closePointEditor(event) {
-            if (event && event.target !== document.getElementById('point-editor-overlay')) {
-                return;
-            }
+        function closePointEditor() {
             document.getElementById('point-editor-overlay').classList.remove('active');
+            document.getElementById('point-editor-panel').classList.remove('active');
             currentEditingPoint = null;
         }
 
         function selectPointIcon(icon) {
-            // Update visual selection in modal
-            document.querySelectorAll('#point-editor-overlay .icon-option').forEach(el => {
+            // Update visual selection
+            document.querySelectorAll('.point-icon-option').forEach(el => {
                 if (el.getAttribute('data-icon') === icon) {
                     el.classList.add('selected');
                 } else {
                     el.classList.remove('selected');
                 }
             });
-            updatePointPreview();
-        }
-
-        function updatePointPreview() {
-            if (!currentEditingPoint) return;
-
-            const visible = document.getElementById('point-visible').checked;
-            const showLabel = document.getElementById('point-label-visible').checked;
-            const borderColor = document.getElementById('point-border-color').value;
-
-            // Get selected icon
-            const selectedIconEl = document.querySelector('#point-editor-overlay .icon-option.selected');
-            const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : 'fa-location-dot';
-
-            const preview = document.getElementById('point-preview');
-
-            if (!visible) {
-                preview.innerHTML = '<div style="color: var(--text-secondary); font-size: 14px;"><i class="fa-solid fa-eye-slash me-2"></i>Punkt ist ausgeblendet</div>';
-                return;
-            }
-
-            if (showLabel) {
-                preview.innerHTML = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><i class="fa-solid ${icon}" style="margin-right: 6px;"></i>${currentEditingPoint.point.name}</div>`;
-            } else {
-                preview.innerHTML = `<div style="font-size: 24px; color: ${borderColor}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><i class="fa-solid ${icon}"></i></div>`;
-            }
         }
 
         function savePointCustomization() {
@@ -2214,7 +2042,7 @@
             const { point, type } = currentEditingPoint;
             const pointId = getPointId(point, type);
 
-            const selectedIconEl = document.querySelector('#point-editor-overlay .icon-option.selected');
+            const selectedIconEl = document.querySelector('.point-icon-option.selected');
             const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : 'fa-location-dot';
 
             pointCustomizations[pointId] = {
