@@ -281,6 +281,28 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
         _xmlDoc = null;
         _mapElement = null;
         _polylinePoints = null;
+        // Element storage for modifications
+        _markers = {
+            trackPoints: [],
+            waypoints: [],
+            routePoints: []
+        };
+        _polylines = {
+            tracks: [],
+            routes: []
+        };
+        // Visibility and style settings
+        _settings = {
+            showTrackPoints: true,
+            showWaypoints: true,
+            showRoutePoints: true,
+            showTracks: true,
+            showRoutes: true,
+            showLabels: true,
+            customIcon: null,
+            trackColor: "#ff0000",
+            trackWidth: 5
+        };
         /**
          * Initialize with options.
          */
@@ -316,7 +338,7 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
          *
          * Supports standard route markers and Geocaching
          */
-        async createMarker(point) {
+        async createMarker(point, markerType = 'trackPoints') {
             let iconBase = WCF_PATH + "images/markerClusterer/";
             const pointElements = point.getElementsByTagName("html");
             const geoCacheElements = point.getElementsByTagName("groundspeak:cache");
@@ -458,22 +480,64 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
                     iconBase += "garmin/";
                 }
             }
-            const markerIcon = iconBase + (icon.length && _availableIcons.indexOf(icon) > -1 ? icon : "pin_blue") + ".webp";
+            // Use custom icon if set, otherwise use default logic
+            let finalIcon = icon.length && _availableIcons.indexOf(icon) > -1 ? icon : "pin_blue";
+            if (this._settings.customIcon && _availableIcons.indexOf(this._settings.customIcon) > -1) {
+                finalIcon = this._settings.customIcon;
+            }
+            const markerIcon = iconBase + finalIcon + ".webp";
+
+            // Determine visibility based on marker type
+            let visible = true;
+            if (markerType === 'trackPoints') {
+                visible = this._settings.showTrackPoints;
+            } else if (markerType === 'waypoints') {
+                visible = this._settings.showWaypoints;
+            } else if (markerType === 'routePoints') {
+                visible = this._settings.showRoutePoints;
+            }
+
             const marker = new google.maps.Marker({
-                map,
+                map: visible ? map : null,
                 position: new google.maps.LatLng(lat, lon),
                 icon: markerIcon,
             });
-            const infoWindow = new google.maps.InfoWindow({
-                content: html,
-            });
-            marker.addListener("click", () => {
-                infoWindow.open(map, marker);
-            });
-            return {
-                marker,
-                infowindow: infoWindow,
-            };
+
+            // Show label based on settings
+            if (this._settings.showLabels && html) {
+                const infoWindow = new google.maps.InfoWindow({
+                    content: html,
+                });
+                marker.addListener("click", () => {
+                    infoWindow.open(map, marker);
+                });
+
+                // Store marker with metadata
+                this._markers[markerType].push({
+                    marker,
+                    infoWindow,
+                    visible,
+                    type: markerType
+                });
+
+                return {
+                    marker,
+                    infowindow: infoWindow,
+                };
+            } else {
+                // Store marker without infoWindow
+                this._markers[markerType].push({
+                    marker,
+                    infoWindow: null,
+                    visible,
+                    type: markerType
+                });
+
+                return {
+                    marker,
+                    infowindow: null,
+                };
+            }
         }
         /**
          * Adds a track to the map.
@@ -489,7 +553,7 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
         /**
          * Adds a polyline to the map.
          */
-        async addLineToMap(route, color, width, elemName) {
+        async addLineToMap(route, color, width, elemName, polylineType = 'tracks') {
             const routePoints = route.getElementsByTagName(elemName);
             const map = await this._mapElement.getMap();
             if (routePoints.length === 0) {
@@ -521,13 +585,30 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
                         this._polylinePoints.push([lon, lat, ele, time, name, desc]);
                     }
                 }
-                await this.createMarker(routePoints[i]);
+                // Pass marker type based on element name
+                const markerType = elemName === 'wpt' ? 'waypoints' : (elemName === 'rtept' ? 'routePoints' : 'trackPoints');
+                await this.createMarker(routePoints[i], markerType);
             }
+
+            // Determine visibility based on polyline type
+            let visible = polylineType === 'tracks' ? this._settings.showTracks : this._settings.showRoutes;
+
+            // Use settings color and width if available
+            const finalColor = this._settings.trackColor || color;
+            const finalWidth = this._settings.trackWidth || width;
+
             const polyline = new google.maps.Polyline({
                 path: points,
-                strokeColor: color,
-                strokeWeight: width,
-                map,
+                strokeColor: finalColor,
+                strokeWeight: finalWidth,
+                map: visible ? map : null,
+            });
+
+            // Store polyline with metadata
+            this._polylines[polylineType].push({
+                polyline,
+                visible,
+                type: polylineType
             });
             if (this._polylinePoints) {
                 const infoWindow = new google.maps.InfoWindow({});
@@ -626,7 +707,7 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
             const waypoints = this._xmlDoc.documentElement.getElementsByTagName("wpt");
             const results = [];
             for (let i = 0; i < waypoints.length; i += 1) {
-                results.push(await this.createMarker(waypoints[i]));
+                results.push(await this.createMarker(waypoints[i], 'waypoints'));
             }
             return results;
         }
@@ -637,7 +718,7 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
             const routes = this._xmlDoc.documentElement.getElementsByTagName("rte");
             const results = [];
             for (let i = 0; i < routes.length; i += 1) {
-                results.push(await this.addLineToMap(routes[i], this._options.trackColor, this._options.trackWidth, "rtept"));
+                results.push(await this.addLineToMap(routes[i], this._options.trackColor, this._options.trackWidth, "rtept", 'routes'));
             }
             return results;
         }
@@ -681,6 +762,100 @@ define(["require", "exports", "tslib", "WoltLabSuite/Core/Core", "WoltLabSuite/C
             const minutes = Math.floor(res / 60) % 60;
             const seconds = Math.floor(res % 60);
             return hours + ":" + minutes + ":" + seconds + "h";
+        }
+        /**
+         * Toggle visibility of markers by type
+         */
+        async toggleMarkers(markerType, show) {
+            this._settings[`show${markerType.charAt(0).toUpperCase() + markerType.slice(1)}`] = show;
+            const map = await this._mapElement.getMap();
+
+            this._markers[markerType].forEach(item => {
+                item.marker.setMap(show ? map : null);
+                item.visible = show;
+            });
+        }
+        /**
+         * Toggle visibility of polylines by type
+         */
+        async togglePolylines(polylineType, show) {
+            const settingKey = polylineType === 'tracks' ? 'showTracks' : 'showRoutes';
+            this._settings[settingKey] = show;
+            const map = await this._mapElement.getMap();
+
+            this._polylines[polylineType].forEach(item => {
+                item.polyline.setMap(show ? map : null);
+                item.visible = show;
+            });
+        }
+        /**
+         * Toggle visibility of info window labels
+         */
+        toggleLabels(show) {
+            this._settings.showLabels = show;
+            // Note: This only affects new markers. Existing markers keep their click handlers.
+        }
+        /**
+         * Change the icon for all markers
+         */
+        async changeIcon(iconName) {
+            if (!_availableIcons.includes(iconName)) {
+                console.error(`Icon ${iconName} not available`);
+                return;
+            }
+
+            this._settings.customIcon = iconName;
+            const map = await this._mapElement.getMap();
+
+            // Update all existing markers
+            const allMarkerTypes = ['trackPoints', 'waypoints', 'routePoints'];
+            for (const markerType of allMarkerTypes) {
+                this._markers[markerType].forEach(item => {
+                    const iconBase = WCF_PATH + "images/markerClusterer/garmin/";
+                    const newIcon = iconBase + iconName + ".webp";
+                    item.marker.setIcon(newIcon);
+                });
+            }
+        }
+        /**
+         * Change track color
+         */
+        async changeTrackColor(color) {
+            this._settings.trackColor = color;
+
+            // Update all existing polylines
+            const allPolylineTypes = ['tracks', 'routes'];
+            for (const polylineType of allPolylineTypes) {
+                this._polylines[polylineType].forEach(item => {
+                    item.polyline.setOptions({ strokeColor: color });
+                });
+            }
+        }
+        /**
+         * Change track width
+         */
+        async changeTrackWidth(width) {
+            this._settings.trackWidth = width;
+
+            // Update all existing polylines
+            const allPolylineTypes = ['tracks', 'routes'];
+            for (const polylineType of allPolylineTypes) {
+                this._polylines[polylineType].forEach(item => {
+                    item.polyline.setOptions({ strokeWeight: width });
+                });
+            }
+        }
+        /**
+         * Get available icons
+         */
+        getAvailableIcons() {
+            return _availableIcons;
+        }
+        /**
+         * Get current settings
+         */
+        getSettings() {
+            return { ...this._settings };
         }
     }
     const gpxParser = new GpxParser();
