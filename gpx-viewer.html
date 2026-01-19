@@ -11,13 +11,41 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+    <!-- Font Awesome for POI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1e40af;
+            --primary-light: #3b82f6;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             height: 100vh;
             overflow: hidden;
+            color: var(--text-primary);
+            background: var(--bg-light);
         }
 
         #app-container {
@@ -26,57 +54,120 @@
         }
 
         #sidebar {
-            width: 400px;
-            background: #f8f9fa;
-            border-right: 1px solid #dee2e6;
+            width: 420px;
+            background: var(--bg-white);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: var(--shadow-md);
         }
 
         #filters {
-            padding: 15px;
-            background: white;
-            border-bottom: 2px solid #dee2e6;
+            padding: 20px;
+            background: var(--bg-white);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .app-header i {
+            font-size: 28px;
+            color: var(--primary-color);
+        }
+
+        .app-header h5 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
         #file-list-container {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 12px;
+            background: var(--bg-light);
         }
 
         .file-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            background: var(--bg-white);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .file-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color);
+            border-radius: 8px 0 0 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
 
         .file-item:hover {
-            background: #e9ecef;
-            border-color: #0d6efd;
-            transform: translateX(3px);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .file-item:hover::before {
+            opacity: 1;
         }
 
         .file-item.selected {
-            background: #0d6efd;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             color: white;
-            border-color: #0d6efd;
+            border-color: var(--primary-dark);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .file-item.selected::before {
+            opacity: 0;
         }
 
         .file-item .file-title {
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-item .file-title i {
+            font-size: 16px;
+            opacity: 0.8;
         }
 
         .file-item .file-meta {
-            font-size: 12px;
-            opacity: 0.8;
+            font-size: 11px;
+            opacity: 0.7;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .file-item .file-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .file-item.selected .file-meta {
@@ -86,6 +177,7 @@
         #map-container {
             flex: 1;
             position: relative;
+            background: var(--bg-light);
         }
 
         #map {
@@ -94,46 +186,103 @@
         }
 
         #stats {
-            padding: 10px 15px;
-            background: white;
-            border-top: 1px solid #dee2e6;
-            font-size: 13px;
-            color: #6c757d;
+            padding: 14px 20px;
+            background: var(--bg-white);
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #stats i {
+            color: var(--primary-color);
         }
 
         .loading {
-            padding: 20px;
+            padding: 40px 20px;
             text-align: center;
-            color: #6c757d;
+            color: var(--text-secondary);
+        }
+
+        .loading i {
+            font-size: 32px;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .no-files {
-            padding: 40px 20px;
+            padding: 60px 20px;
             text-align: center;
-            color: #6c757d;
+            color: var(--text-secondary);
+        }
+
+        .no-files i {
+            font-size: 48px;
+            color: var(--border-color);
+            margin-bottom: 16px;
+            display: block;
         }
 
         .db-upload-area {
-            padding: 30px;
-            margin: 20px;
-            border: 3px dashed #dee2e6;
-            border-radius: 8px;
+            padding: 40px 30px;
+            margin: 0 0 20px 0;
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
             text-align: center;
-            background: white;
+            background: var(--bg-light);
+            transition: all 0.3s;
+        }
+
+        .db-upload-area i {
+            font-size: 56px;
+            color: var(--primary-color);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .db-upload-area h6 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .db-upload-area p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
         }
 
         .db-upload-area.drag-over {
-            border-color: #0d6efd;
-            background: #e7f1ff;
+            border-color: var(--primary-color);
+            background: #eff6ff;
+            transform: scale(1.02);
         }
 
         .filter-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-label i {
+            font-size: 12px;
+            color: var(--primary-color);
         }
 
         /* Custom scrollbar */
@@ -156,32 +305,59 @@
 
         .map-info {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 300px;
+            top: 16px;
+            right: 16px;
+            background: var(--bg-white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            max-width: 350px;
             z-index: 1000;
+            border: 1px solid var(--border-color);
         }
 
         .map-info h6 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            font-weight: 600;
+            margin: 0 0 14px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--bg-light);
+        }
+
+        .map-info h6 i {
+            font-size: 18px;
+            color: var(--primary-color);
         }
 
         .map-info .info-row {
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-info .info-row i {
+            width: 20px;
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        .map-info .info-row strong {
+            color: var(--text-primary);
+            font-weight: 600;
+            min-width: 80px;
         }
 
         .controls-panel {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #dee2e6;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 2px solid var(--bg-light);
         }
 
         .controls-panel-header {
@@ -191,87 +367,191 @@
             justify-content: space-between;
             align-items: center;
             font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #495057;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            padding: 10px 12px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .controls-panel-header i {
+            color: var(--primary-color);
+            margin-right: 8px;
         }
 
         .controls-panel-header:hover {
-            color: #0d6efd;
+            background: #eff6ff;
+            color: var(--primary-color);
+        }
+
+        .controls-panel-header .toggle-icon {
+            transition: transform 0.3s;
+            color: var(--text-secondary);
+        }
+
+        .controls-panel-header.expanded .toggle-icon {
+            transform: rotate(180deg);
         }
 
         .controls-panel-content {
             display: none;
+            padding: 12px 0;
         }
 
         .controls-panel-content.expanded {
             display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .control-group {
-            margin-bottom: 10px;
+            margin-bottom: 16px;
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 8px;
         }
 
         .control-label {
             font-size: 11px;
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 4px;
-            display: block;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-label i {
+            color: var(--primary-color);
+            font-size: 12px;
         }
 
         .control-input {
             width: 100%;
-            font-size: 11px;
+            font-size: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            transition: all 0.2s;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
+            gap: 8px;
+            font-size: 12px;
+            padding: 8px;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .checkbox-group:hover {
+            background: var(--bg-white);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            margin: 0;
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
         .color-picker-wrapper {
             display: flex;
-            gap: 6px;
+            gap: 10px;
             align-items: center;
+            padding: 8px;
+            background: var(--bg-white);
+            border-radius: 6px;
+            margin-bottom: 6px;
         }
 
         .color-picker {
-            width: 40px;
-            height: 28px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
+            width: 48px;
+            height: 36px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-picker:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
+        .color-picker-wrapper label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            flex: 1;
         }
 
         .icon-selector {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 4px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
         }
 
         .icon-option {
-            padding: 6px;
-            border: 2px solid #dee2e6;
-            border-radius: 4px;
+            aspect-ratio: 1;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
             cursor: pointer;
             text-align: center;
-            font-size: 16px;
-            background: white;
+            font-size: 20px;
+            background: var(--bg-white);
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .icon-option:hover {
-            border-color: #0d6efd;
-            background: #e7f1ff;
+            border-color: var(--primary-color);
+            background: #eff6ff;
+            transform: scale(1.05);
         }
 
         .icon-option.selected {
-            border-color: #0d6efd;
-            background: #0d6efd;
+            border-color: var(--primary-color);
+            background: var(--primary-color);
             color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .icon-option i {
+            font-size: 20px;
         }
 
         /* Individual Point Editor Modal */
@@ -282,10 +562,21 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
             z-index: 9999;
             justify-content: center;
             align-items: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
 
         .point-editor-overlay.active {
@@ -293,94 +584,154 @@
         }
 
         .point-editor-modal {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            background: var(--bg-white);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
+            max-width: 480px;
+            max-height: 85vh;
             overflow-y: auto;
-            padding: 20px;
+            padding: 28px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .point-editor-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #dee2e6;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--bg-light);
+        }
+
+        .point-editor-header-content {
+            flex: 1;
         }
 
         .point-editor-header h6 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
+            margin: 0 0 8px 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .point-editor-header h6 i {
+            color: var(--primary-color);
         }
 
         .point-editor-close {
-            background: none;
+            background: var(--bg-light);
             border: none;
-            font-size: 24px;
+            font-size: 20px;
             cursor: pointer;
-            color: #6c757d;
+            color: var(--text-secondary);
             padding: 0;
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 8px;
+            transition: all 0.2s;
         }
 
         .point-editor-close:hover {
-            color: #dc3545;
+            background: var(--danger-color);
+            color: white;
         }
 
         .point-editor-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .point-editor-label {
             font-size: 12px;
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 6px;
-            display: block;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .point-editor-input {
-            width: 100%;
+        .point-editor-label i {
+            color: var(--primary-color);
             font-size: 13px;
         }
 
+        .point-editor-input {
+            width: 100%;
+            font-size: 14px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .point-editor-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .point-editor-input:read-only {
+            background: var(--bg-light);
+            color: var(--text-secondary);
+        }
+
         .point-type-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
             font-size: 11px;
-            font-weight: 600;
-            margin-left: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .point-type-badge i {
+            font-size: 12px;
         }
 
         .point-type-waypoint {
-            background: #dc3545;
+            background: var(--danger-color);
             color: white;
         }
 
         .point-type-routepoint {
-            background: #fd7e14;
+            background: var(--warning-color);
             color: white;
         }
 
         .custom-marker-preview {
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 4px;
+            padding: 20px;
+            background: var(--bg-light);
+            border-radius: 8px;
             text-align: center;
             font-size: 24px;
-            margin-top: 8px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border-color);
         }
     </style>
 </head>
@@ -389,19 +740,22 @@
         <!-- Sidebar: Filters + File List -->
         <div id="sidebar">
             <div id="filters">
-                <h5 class="mb-3">🗺️ GPX Track Viewer</h5>
+                <div class="app-header">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <h5>GPX Track Viewer</h5>
+                </div>
 
                 <!-- Database Upload -->
                 <div id="db-upload-section">
                     <div class="db-upload-area" id="db-upload-area">
-                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <i class="fa-solid fa-database"></i>
                         <h6>Datenbank laden</h6>
-                        <p style="font-size: 13px; color: #6c757d; margin-bottom: 15px;">
+                        <p>
                             Ziehe deine SQLite-Datei hierher oder klicke zum Auswählen
                         </p>
                         <input type="file" id="db-file-input" accept=".sqlite,.db,.sqlite3" style="display: none;">
-                        <button class="btn btn-primary btn-sm" onclick="document.getElementById('db-file-input').click()">
-                            Datei auswählen
+                        <button class="btn btn-primary" onclick="document.getElementById('db-file-input').click()">
+                            <i class="fa-solid fa-folder-open me-2"></i>Datei auswählen
                         </button>
                     </div>
                 </div>
@@ -409,26 +763,38 @@
                 <!-- Filters (hidden until DB loaded) -->
                 <div id="filter-controls" style="display: none;">
                     <div class="mb-3">
-                        <label class="filter-label">Hochgeladen von</label>
-                        <select class="form-select form-select-sm" id="uploader-filter">
+                        <label class="filter-label">
+                            <i class="fa-solid fa-user"></i>
+                            Hochgeladen von
+                        </label>
+                        <select class="form-select" id="uploader-filter">
                             <option value="">Alle Uploader</option>
                         </select>
                     </div>
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="filter-label">Von</label>
-                            <input type="date" class="form-control form-control-sm" id="date-from">
+                            <label class="filter-label">
+                                <i class="fa-solid fa-calendar"></i>
+                                Von
+                            </label>
+                            <input type="date" class="form-control" id="date-from">
                         </div>
                         <div class="col-6">
-                            <label class="filter-label">Bis</label>
-                            <input type="date" class="form-control form-control-sm" id="date-to">
+                            <label class="filter-label">
+                                <i class="fa-solid fa-calendar"></i>
+                                Bis
+                            </label>
+                            <input type="date" class="form-control" id="date-to">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="filter-label">Sortierung</label>
-                        <select class="form-select form-select-sm" id="sort-select">
+                        <label class="filter-label">
+                            <i class="fa-solid fa-arrow-down-wide-short"></i>
+                            Sortierung
+                        </label>
+                        <select class="form-select" id="sort-select">
                             <option value="date-desc">Datum (neueste zuerst)</option>
                             <option value="date-asc">Datum (älteste zuerst)</option>
                             <option value="name-asc">Name (A-Z)</option>
@@ -436,15 +802,15 @@
                         </select>
                     </div>
 
-                    <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
-                        Filter zurücksetzen
+                    <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        <i class="fa-solid fa-rotate-left me-2"></i>Filter zurücksetzen
                     </button>
                 </div>
 
                 <!-- Clear Database Button (hidden until DB loaded) -->
-                <div id="clear-db-button" style="display: none; padding: 0 15px; margin-top: 10px;">
-                    <button class="btn btn-sm btn-outline-danger w-100" onclick="clearDatabase()">
-                        🗑️ Datenbank löschen
+                <div id="clear-db-button" style="display: none; margin-top: 12px;">
+                    <button class="btn btn-outline-danger w-100" onclick="clearDatabase()">
+                        <i class="fa-solid fa-trash me-2"></i>Datenbank löschen
                     </button>
                 </div>
             </div>
@@ -452,12 +818,14 @@
             <!-- File List -->
             <div id="file-list-container">
                 <div class="no-files" id="no-files-message">
+                    <i class="fa-solid fa-database"></i>
                     Keine Datenbank geladen
                 </div>
             </div>
 
             <!-- Stats Footer -->
             <div id="stats">
+                <i class="fa-solid fa-list"></i>
                 <span id="stats-text">Keine Dateien geladen</span>
             </div>
         </div>
@@ -466,25 +834,46 @@
         <div id="map-container">
             <div id="map"></div>
             <div class="map-info" id="map-info" style="display: none;">
-                <h6 id="track-title">Track Name</h6>
-                <div class="info-row"><strong>Distanz:</strong> <span id="track-distance">-</span></div>
-                <div class="info-row"><strong>Waypoints:</strong> <span id="track-waypoints">-</span></div>
-                <div class="info-row"><strong>Upload:</strong> <span id="track-upload-date">-</span></div>
-                <div class="info-row"><strong>Uploader:</strong> <span id="track-uploader">-</span></div>
-                <button class="btn btn-sm btn-success w-100 mt-2" id="download-gpx-btn" onclick="downloadCurrentGPX()">
-                    ⬇️ GPX herunterladen
+                <h6><i class="fa-solid fa-route"></i><span id="track-title">Track Name</span></h6>
+                <div class="info-row">
+                    <i class="fa-solid fa-ruler"></i>
+                    <strong>Distanz:</strong> <span id="track-distance">-</span>
+                </div>
+                <div class="info-row">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <strong>Waypoints:</strong> <span id="track-waypoints">-</span>
+                </div>
+                <div class="info-row">
+                    <i class="fa-solid fa-calendar"></i>
+                    <strong>Upload:</strong> <span id="track-upload-date">-</span>
+                </div>
+                <div class="info-row">
+                    <i class="fa-solid fa-user"></i>
+                    <strong>Uploader:</strong> <span id="track-uploader">-</span>
+                </div>
+                <button class="btn btn-success w-100 mt-3" id="download-gpx-btn" onclick="downloadCurrentGPX()">
+                    <i class="fa-solid fa-download me-2"></i>GPX herunterladen
                 </button>
-                <div class="info-row" style="margin-top: 8px; font-size: 11px; font-style: italic; opacity: 0.7;">
-                    <div style="margin-bottom: 2px;"><span style="color: #0d6efd;">●</span> Blau = Aufgezeichneter Track</div>
-                    <div style="margin-bottom: 2px;"><span style="color: #fd7e14;">●</span> Orange = Route (aus GPX-Routenpunkten)</div>
-                    <div><span style="color: #28a745;">●</span> Grün = Route (aus Wegpunkten)</div>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-secondary);">
+                    <div style="margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle" style="color: #0d6efd; font-size: 8px;"></i>
+                        <span>Blau = Aufgezeichneter Track</span>
+                    </div>
+                    <div style="margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle" style="color: #fd7e14; font-size: 8px;"></i>
+                        <span>Orange = Route (aus GPX-Routenpunkten)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle" style="color: #28a745; font-size: 8px;"></i>
+                        <span>Grün = Route (aus Wegpunkten)</span>
+                    </div>
                 </div>
 
                 <!-- Element Modification Controls -->
                 <div class="controls-panel">
-                    <div class="controls-panel-header" onclick="toggleControlsPanel()">
-                        <span>⚙️ Darstellung anpassen</span>
-                        <span id="controls-toggle-icon">▼</span>
+                    <div class="controls-panel-header" id="controls-panel-header-btn" onclick="toggleControlsPanel()">
+                        <span><i class="fa-solid fa-sliders"></i>Darstellung anpassen</span>
+                        <i class="fa-solid fa-chevron-down toggle-icon" id="controls-toggle-icon"></i>
                     </div>
                     <div class="controls-panel-content" id="controls-panel-content">
                         <!-- Visibility Controls -->
@@ -506,45 +895,76 @@
 
                         <!-- Waypoint Icon Selector -->
                         <div class="control-group">
-                            <label class="control-label">Wegpunkt-Icon</label>
+                            <label class="control-label">
+                                <i class="fa-solid fa-icons"></i>
+                                Wegpunkt-Icon
+                            </label>
                             <div class="icon-selector">
-                                <div class="icon-option selected" data-icon="📍" onclick="selectIcon('📍')">📍</div>
-                                <div class="icon-option" data-icon="🎯" onclick="selectIcon('🎯')">🎯</div>
-                                <div class="icon-option" data-icon="⭐" onclick="selectIcon('⭐')">⭐</div>
-                                <div class="icon-option" data-icon="🏁" onclick="selectIcon('🏁')">🏁</div>
-                                <div class="icon-option" data-icon="📌" onclick="selectIcon('📌')">📌</div>
-                                <div class="icon-option" data-icon="🔴" onclick="selectIcon('🔴')">🔴</div>
-                                <div class="icon-option" data-icon="🟢" onclick="selectIcon('🟢')">🟢</div>
-                                <div class="icon-option" data-icon="🔵" onclick="selectIcon('🔵')">🔵</div>
+                                <div class="icon-option selected" data-icon="fa-location-dot" onclick="selectIcon('fa-location-dot')">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-flag" onclick="selectIcon('fa-flag')">
+                                    <i class="fa-solid fa-flag"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-star" onclick="selectIcon('fa-star')">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-flag-checkered" onclick="selectIcon('fa-flag-checkered')">
+                                    <i class="fa-solid fa-flag-checkered"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-circle" onclick="selectIcon('fa-circle')">
+                                    <i class="fa-solid fa-circle"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-map-pin" onclick="selectIcon('fa-map-pin')">
+                                    <i class="fa-solid fa-map-pin"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-mountain" onclick="selectIcon('fa-mountain')">
+                                    <i class="fa-solid fa-mountain"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-campground" onclick="selectIcon('fa-campground')">
+                                    <i class="fa-solid fa-campground"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-utensils" onclick="selectIcon('fa-utensils')">
+                                    <i class="fa-solid fa-utensils"></i>
+                                </div>
+                                <div class="icon-option" data-icon="fa-house" onclick="selectIcon('fa-house')">
+                                    <i class="fa-solid fa-house"></i>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Line Width Control -->
                         <div class="control-group">
-                            <label class="control-label">Linienbreite: <span id="line-width-value">4</span>px</label>
+                            <label class="control-label">
+                                <i class="fa-solid fa-ruler-horizontal"></i>
+                                Linienbreite: <span id="line-width-value">4</span>px
+                            </label>
                             <input type="range" class="form-range control-input" id="line-width" min="1" max="10" value="4" oninput="updateLineWidth(this.value)">
                         </div>
 
                         <!-- Line Color Control -->
                         <div class="control-group">
-                            <label class="control-label">Linienfarbe</label>
+                            <label class="control-label">
+                                <i class="fa-solid fa-palette"></i>
+                                Linienfarbe
+                            </label>
                             <div class="color-picker-wrapper">
                                 <input type="color" class="color-picker" id="track-color" value="#0d6efd" onchange="updateDisplay()">
-                                <label for="track-color" style="font-size: 11px;">Track</label>
+                                <label for="track-color">Track</label>
                             </div>
                             <div class="color-picker-wrapper">
                                 <input type="color" class="color-picker" id="route-color" value="#fd7e14" onchange="updateDisplay()">
-                                <label for="route-color" style="font-size: 11px;">Route</label>
+                                <label for="route-color">Route</label>
                             </div>
                             <div class="color-picker-wrapper">
                                 <input type="color" class="color-picker" id="generated-color" value="#28a745" onchange="updateDisplay()">
-                                <label for="generated-color" style="font-size: 11px;">Generiert</label>
+                                <label for="generated-color">Generiert</label>
                             </div>
                         </div>
 
                         <!-- Reset Button -->
-                        <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetDisplaySettings()">
-                            Zurücksetzen
+                        <button class="btn btn-outline-secondary w-100" onclick="resetDisplaySettings()">
+                            <i class="fa-solid fa-rotate-left me-2"></i>Zurücksetzen
                         </button>
                     </div>
                 </div>
@@ -556,20 +976,28 @@
     <div class="point-editor-overlay" id="point-editor-overlay" onclick="closePointEditor(event)">
         <div class="point-editor-modal" onclick="event.stopPropagation()">
             <div class="point-editor-header">
-                <div>
-                    <h6 id="point-editor-title">Punkt bearbeiten</h6>
+                <div class="point-editor-header-content">
+                    <h6><i class="fa-solid fa-pen-to-square"></i><span id="point-editor-title">Punkt bearbeiten</span></h6>
                     <span id="point-editor-type" class="point-type-badge"></span>
                 </div>
-                <button class="point-editor-close" onclick="closePointEditor()">&times;</button>
+                <button class="point-editor-close" onclick="closePointEditor()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Name</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-tag"></i>
+                    Name
+                </label>
                 <input type="text" class="form-control point-editor-input" id="point-name" readonly>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Sichtbarkeit</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-eye"></i>
+                    Sichtbarkeit
+                </label>
                 <div class="checkbox-group">
                     <input type="checkbox" id="point-visible" checked onchange="updatePointPreview()">
                     <label for="point-visible">Punkt anzeigen</label>
@@ -581,41 +1009,90 @@
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Icon</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-icons"></i>
+                    Icon
+                </label>
                 <div class="icon-selector">
-                    <div class="icon-option" data-icon="📍" onclick="selectPointIcon('📍')">📍</div>
-                    <div class="icon-option" data-icon="🎯" onclick="selectPointIcon('🎯')">🎯</div>
-                    <div class="icon-option" data-icon="⭐" onclick="selectPointIcon('⭐')">⭐</div>
-                    <div class="icon-option" data-icon="🏁" onclick="selectPointIcon('🏁')">🏁</div>
-                    <div class="icon-option" data-icon="📌" onclick="selectPointIcon('📌')">📌</div>
-                    <div class="icon-option" data-icon="🔴" onclick="selectPointIcon('🔴')">🔴</div>
-                    <div class="icon-option" data-icon="🟢" onclick="selectPointIcon('🟢')">🟢</div>
-                    <div class="icon-option" data-icon="🔵" onclick="selectPointIcon('🔵')">🔵</div>
-                    <div class="icon-option" data-icon="🟡" onclick="selectPointIcon('🟡')">🟡</div>
-                    <div class="icon-option" data-icon="🟣" onclick="selectPointIcon('🟣')">🟣</div>
-                    <div class="icon-option" data-icon="⚫" onclick="selectPointIcon('⚫')">⚫</div>
-                    <div class="icon-option" data-icon="⚪" onclick="selectPointIcon('⚪')">⚪</div>
+                    <div class="icon-option" data-icon="fa-location-dot" onclick="selectPointIcon('fa-location-dot')">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-flag" onclick="selectPointIcon('fa-flag')">
+                        <i class="fa-solid fa-flag"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-star" onclick="selectPointIcon('fa-star')">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-flag-checkered" onclick="selectPointIcon('fa-flag-checkered')">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-circle" onclick="selectPointIcon('fa-circle')">
+                        <i class="fa-solid fa-circle"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-map-pin" onclick="selectPointIcon('fa-map-pin')">
+                        <i class="fa-solid fa-map-pin"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-mountain" onclick="selectPointIcon('fa-mountain')">
+                        <i class="fa-solid fa-mountain"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-campground" onclick="selectPointIcon('fa-campground')">
+                        <i class="fa-solid fa-campground"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-utensils" onclick="selectPointIcon('fa-utensils')">
+                        <i class="fa-solid fa-utensils"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-house" onclick="selectPointIcon('fa-house')">
+                        <i class="fa-solid fa-house"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-tree" onclick="selectPointIcon('fa-tree')">
+                        <i class="fa-solid fa-tree"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-water" onclick="selectPointIcon('fa-water')">
+                        <i class="fa-solid fa-water"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-gas-pump" onclick="selectPointIcon('fa-gas-pump')">
+                        <i class="fa-solid fa-gas-pump"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-hospital" onclick="selectPointIcon('fa-hospital')">
+                        <i class="fa-solid fa-hospital"></i>
+                    </div>
+                    <div class="icon-option" data-icon="fa-camera" onclick="selectPointIcon('fa-camera')">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
                 </div>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Rahmenfarbe</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-palette"></i>
+                    Rahmenfarbe
+                </label>
                 <input type="color" class="form-control point-editor-input" id="point-border-color" onchange="updatePointPreview()">
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Notizen</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-note-sticky"></i>
+                    Notizen
+                </label>
                 <textarea class="form-control point-editor-input" id="point-notes" rows="3" placeholder="Persönliche Notizen zu diesem Punkt..."></textarea>
             </div>
 
             <div class="point-editor-group">
-                <label class="point-editor-label">Vorschau</label>
+                <label class="point-editor-label">
+                    <i class="fa-solid fa-eye"></i>
+                    Vorschau
+                </label>
                 <div class="custom-marker-preview" id="point-preview"></div>
             </div>
 
             <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-fill" onclick="savePointCustomization()">Speichern</button>
-                <button class="btn btn-outline-secondary flex-fill" onclick="resetPointCustomization()">Zurücksetzen</button>
+                <button class="btn btn-primary flex-fill" onclick="savePointCustomization()">
+                    <i class="fa-solid fa-check me-2"></i>Speichern
+                </button>
+                <button class="btn btn-outline-secondary flex-fill" onclick="resetPointCustomization()">
+                    <i class="fa-solid fa-rotate-left me-2"></i>Zurücksetzen
+                </button>
             </div>
         </div>
     </div>
@@ -643,7 +1120,7 @@
             showWaypoints: true,
             showRoutePoints: true,
             showLabels: true,
-            waypointIcon: '📍',
+            waypointIcon: 'fa-location-dot',
             lineWidth: 4,
             trackColor: '#0d6efd',
             routeColor: '#fd7e14',
@@ -881,9 +1358,9 @@
 
                 let popupText = `<strong>${track.name}</strong>`;
                 if (track.generated) {
-                    popupText += '<br><small>🤖 Route aus Wegpunkten (OSRM)</small>';
+                    popupText += '<br><small><i class="fa-solid fa-robot me-1"></i>Route aus Wegpunkten (OSRM)</small>';
                 } else if (track.isRoute) {
-                    popupText += '<br><small>📍 Route aus GPX-Routenpunkten (OSRM)</small>';
+                    popupText += '<br><small><i class="fa-solid fa-location-dot me-1"></i>Route aus GPX-Routenpunkten (OSRM)</small>';
                 }
                 polyline.bindPopup(popupText);
 
@@ -912,9 +1389,9 @@
 
                     let iconHtml;
                     if (showLabel) {
-                        iconHtml = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;">${icon} ${wpt.name}</div>`;
+                        iconHtml = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;"><i class="fa-solid ${icon}" style="margin-right: 6px;"></i>${wpt.name}</div>`;
                     } else {
-                        iconHtml = `<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">${icon}</div>`;
+                        iconHtml = `<div style="font-size: 24px; color: ${borderColor}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;"><i class="fa-solid ${icon}"></i></div>`;
                     }
 
                     const marker = L.marker([wpt.lat, wpt.lon], {
@@ -957,15 +1434,15 @@
                             allPoints.push([rtept.lat, rtept.lon]);
 
                             // Get customized values or use defaults
-                            const icon = customization.icon || '📍';
+                            const icon = customization.icon || 'fa-location-dot';
                             const borderColor = customization.borderColor || '#fd7e14';
                             const showLabel = customization.showLabel !== undefined ? customization.showLabel : displaySettings.showLabels;
 
                             let iconHtml;
                             if (showLabel) {
-                                iconHtml = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;">${icon} ${rtept.name}</div>`;
+                                iconHtml = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;"><i class="fa-solid ${icon}" style="margin-right: 6px;"></i>${rtept.name}</div>`;
                             } else {
-                                iconHtml = `<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">${icon}</div>`;
+                                iconHtml = `<div style="font-size: 24px; color: ${borderColor}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;"><i class="fa-solid ${icon}"></i></div>`;
                             }
 
                             const marker = L.marker([rtept.lat, rtept.lon], {
@@ -1137,7 +1614,7 @@
                 document.getElementById('db-upload-section').style.display = 'block';
                 document.getElementById('filter-controls').style.display = 'none';
                 document.getElementById('clear-db-button').style.display = 'none';
-                document.getElementById('file-list-container').innerHTML = '<div class="no-files">Keine Datenbank geladen</div>';
+                document.getElementById('file-list-container').innerHTML = '<div class="no-files"><i class="fa-solid fa-database"></i>Keine Datenbank geladen</div>';
                 document.getElementById('stats-text').textContent = 'Keine Dateien geladen';
             }
         }
@@ -1191,7 +1668,7 @@
             const container = document.getElementById('file-list-container');
 
             if (files.length === 0) {
-                container.innerHTML = '<div class="no-files">Keine Dateien gefunden</div>';
+                container.innerHTML = '<div class="no-files"><i class="fa-solid fa-folder-open"></i>Keine Dateien gefunden</div>';
                 document.getElementById('stats-text').textContent = 'Keine Dateien gefunden';
                 return;
             }
@@ -1202,11 +1679,14 @@
                 const item = document.createElement('div');
                 item.className = 'file-item';
                 item.innerHTML = `
-                    <div class="file-title">${file.title}</div>
+                    <div class="file-title">
+                        <i class="fa-solid fa-route"></i>
+                        ${file.title}
+                    </div>
                     <div class="file-meta">
-                        ${file.category ? `📁 ${file.category}` : ''}
-                        ${file.upload_date ? `• 📅 ${file.upload_date}` : ''}
-                        ${file.blob_size ? `• 📦 ${(file.blob_size / 1024).toFixed(1)} KB` : ''}
+                        ${file.category ? `<span><i class="fa-solid fa-folder"></i>${file.category}</span>` : ''}
+                        ${file.upload_date ? `<span><i class="fa-solid fa-calendar"></i>${file.upload_date}</span>` : ''}
+                        ${file.blob_size ? `<span><i class="fa-solid fa-file"></i>${(file.blob_size / 1024).toFixed(1)} KB</span>` : ''}
                     </div>
                 `;
 
@@ -1279,14 +1759,14 @@
         // Display control functions
         function toggleControlsPanel() {
             const content = document.getElementById('controls-panel-content');
-            const icon = document.getElementById('controls-toggle-icon');
+            const header = document.getElementById('controls-panel-header-btn');
 
             if (content.classList.contains('expanded')) {
                 content.classList.remove('expanded');
-                icon.textContent = '▼';
+                header.classList.remove('expanded');
             } else {
                 content.classList.add('expanded');
-                icon.textContent = '▲';
+                header.classList.add('expanded');
             }
         }
 
@@ -1331,7 +1811,7 @@
                 showWaypoints: true,
                 showRoutePoints: true,
                 showLabels: true,
-                waypointIcon: '📍',
+                waypointIcon: 'fa-location-dot',
                 lineWidth: 4,
                 trackColor: '#0d6efd',
                 routeColor: '#fd7e14',
@@ -1350,7 +1830,7 @@
 
             // Reset icon selection
             document.querySelectorAll('.icon-option').forEach(el => {
-                if (el.getAttribute('data-icon') === '📍') {
+                if (el.getAttribute('data-icon') === 'fa-location-dot') {
                     el.classList.add('selected');
                 } else {
                     el.classList.remove('selected');
@@ -1377,10 +1857,10 @@
             // Set point type badge
             const typeBadge = document.getElementById('point-editor-type');
             if (type === 'waypoint') {
-                typeBadge.textContent = 'Wegpunkt';
+                typeBadge.innerHTML = '<i class="fa-solid fa-location-dot"></i>Wegpunkt';
                 typeBadge.className = 'point-type-badge point-type-waypoint';
             } else {
-                typeBadge.textContent = 'Routenpunkt';
+                typeBadge.innerHTML = '<i class="fa-solid fa-route"></i>Routenpunkt';
                 typeBadge.className = 'point-type-badge point-type-routepoint';
             }
 
@@ -1391,7 +1871,7 @@
             document.getElementById('point-notes').value = customization.notes || '';
 
             // Set icon
-            const icon = customization.icon || (type === 'waypoint' ? displaySettings.waypointIcon : '📍');
+            const icon = customization.icon || (type === 'waypoint' ? displaySettings.waypointIcon : 'fa-location-dot');
             document.querySelectorAll('#point-editor-overlay .icon-option').forEach(el => {
                 if (el.getAttribute('data-icon') === icon) {
                     el.classList.add('selected');
@@ -1440,19 +1920,19 @@
 
             // Get selected icon
             const selectedIconEl = document.querySelector('#point-editor-overlay .icon-option.selected');
-            const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : '📍';
+            const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : 'fa-location-dot';
 
             const preview = document.getElementById('point-preview');
 
             if (!visible) {
-                preview.innerHTML = '<div style="color: #6c757d; font-size: 14px;">Punkt ist ausgeblendet</div>';
+                preview.innerHTML = '<div style="color: var(--text-secondary); font-size: 14px;"><i class="fa-solid fa-eye-slash me-2"></i>Punkt ist ausgeblendet</div>';
                 return;
             }
 
             if (showLabel) {
-                preview.innerHTML = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${icon} ${currentEditingPoint.point.name}</div>`;
+                preview.innerHTML = `<div style="background: white; padding: 4px 8px; border: 2px solid ${borderColor}; border-radius: 4px; font-size: 12px; font-weight: 600; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"><i class="fa-solid ${icon}" style="margin-right: 6px;"></i>${currentEditingPoint.point.name}</div>`;
             } else {
-                preview.innerHTML = `<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${icon}</div>`;
+                preview.innerHTML = `<div style="font-size: 24px; color: ${borderColor}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><i class="fa-solid ${icon}"></i></div>`;
             }
         }
 
@@ -1463,7 +1943,7 @@
             const pointId = getPointId(point, type);
 
             const selectedIconEl = document.querySelector('#point-editor-overlay .icon-option.selected');
-            const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : '📍';
+            const icon = selectedIconEl ? selectedIconEl.getAttribute('data-icon') : 'fa-location-dot';
 
             pointCustomizations[pointId] = {
                 visible: document.getElementById('point-visible').checked,
